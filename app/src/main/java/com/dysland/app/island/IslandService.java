@@ -118,6 +118,8 @@ public final class IslandService extends Service {
         layout=new WindowManager.LayoutParams(dp(prefs.width()),dp(prefs.height()),WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,PixelFormat.TRANSLUCENT);
         layout.gravity=Gravity.TOP|Gravity.CENTER_HORIZONTAL;
+        // Anchor coordinates are absolute display coordinates, including the status bar.
+        if (Build.VERSION.SDK_INT>=30) layout.setFitInsetsTypes(0);
         layout.layoutInDisplayCutoutMode=WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         layout.setTitle("Dysland · atividade");
         try { windows.addView(island,layout); attached=true; }

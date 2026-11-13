@@ -109,4 +109,34 @@ public final class IslandSmokeTest {
         assertEquals(570,com.dysland.app.island.CameraAnchor.resolve(insets,1080,3f,prefs).x,.01f);
         prefs.set("offset",0);
     }
+    @Test public void overlayWindowUsesDisplayCoordinatesWithoutStatusBarInset() throws Exception {
+        shell("appops set com.dysland.app SYSTEM_ALERT_WINDOW allow");
+        android.app.UiAutomation automation=instrumentation.getUiAutomation();
+        android.accessibilityservice.AccessibilityServiceInfo info=automation.getServiceInfo();
+        int originalFlags=info.flags;
+        info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+        automation.setServiceInfo(info);
+        com.dysland.app.data.Preferences prefs=new com.dysland.app.data.Preferences(context);
+        prefs.set("reduce_motion",true);
+        try (ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(activity -> activity.findViewById(R.id.stopwatch_start).performClick());
+            SystemClock.sleep(1000);
+            android.graphics.Rect bounds=null;
+            for (android.view.accessibility.AccessibilityWindowInfo window:automation.getWindows()) {
+                if (window.getTitle()!=null && window.getTitle().toString().contains("Dysland · atividade")) {
+                    bounds=new android.graphics.Rect(); window.getBoundsInScreen(bounds); break;
+                }
+            }
+            assertNotNull("Overlay must expose its actual interactive window",bounds);
+            android.view.WindowManager manager=context.getSystemService(android.view.WindowManager.class);
+            android.view.WindowMetrics metrics=manager.getMaximumWindowMetrics();
+            float density=context.getResources().getDisplayMetrics().density;
+            com.dysland.app.island.CameraAnchor camera=com.dysland.app.island.CameraAnchor.resolve(metrics.getWindowInsets(),metrics.getBounds().width(),density,prefs);
+            int height=Math.max(Math.round(prefs.height()*density),Math.round(camera.diameter+8*density));
+            assertEquals("No status bar offset may be added to the island",Math.max(0,Math.round(camera.y-height/2f)),bounds.top,2);
+        } finally {
+            prefs.set("reduce_motion",false);
+            info.flags=originalFlags;automation.setServiceInfo(info);
+        }
+    }
 }

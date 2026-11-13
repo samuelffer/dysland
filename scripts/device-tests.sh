@@ -20,8 +20,9 @@ adb shell appops set com.dysland.app SYSTEM_ALERT_WINDOW allow
 adb shell pm grant com.dysland.app android.permission.POST_NOTIFICATIONS
 adb shell am start -W -n com.dysland.app/.MainActivity
 sleep 2
-adb shell uiautomator dump /data/local/tmp/dysland-ui.xml
-adb pull /data/local/tmp/dysland-ui.xml /tmp/dysland-ui.xml
-python3 -c 'from pathlib import Path; s=Path("/tmp/dysland-ui.xml").read_text(); assert "com.dysland.app" in s; assert "responding" not in s and "Close app" not in s, "System error dialog obscured screenshot"'
+# UIAutomator waits for idle and is unsuitable for an endlessly rotating preview.
+# Check the actual focused window instead; an ANR dialog would own focus.
+adb shell dumpsys window > /tmp/dysland-window.txt
+python3 -c 'from pathlib import Path; s=Path("/tmp/dysland-window.txt").read_text(); focus=[line for line in s.splitlines() if "mCurrentFocus=" in line]; assert focus and "com.dysland.app" in focus[0], "Screenshot blocked by another window: "+str(focus)'
 adb exec-out screencap -p > screenshots/dysland-home.png
 python3 -c 'from pathlib import Path; p=Path("screenshots/dysland-home.png"); assert p.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")'
