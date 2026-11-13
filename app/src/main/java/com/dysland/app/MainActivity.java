@@ -54,7 +54,11 @@ public final class MainActivity extends Activity {
             .setPositiveButton("Informações do app",(d,w) -> open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()))))
             .setNegativeButton("Fechar",null).show());
         findViewById(R.id.enable).setOnClickListener(v -> {
-            if (IslandService.running) { stopService(new Intent(this,IslandService.class)); prefs.set("wanted",false); updateStatus(); }
+            if (IslandService.running) {
+                stopService(new Intent(this,IslandService.class));
+                prefs.set("wanted",false);
+                findViewById(R.id.enable).postDelayed(this::updateStatus,250);
+            }
             else startIsland(IslandService.START,0);
         });
         setupGeometry();
@@ -127,12 +131,16 @@ public final class MainActivity extends Activity {
         ((SeekBar)findViewById(R.id.offset)).setProgress(prefs.offset()+100); geometryLabel();
     }
     private void geometryLabel() { ((TextView)findViewById(R.id.geometry_label)).setText(prefs.width()+" × "+prefs.height()+" dp · topo "+prefs.top()+" · deslocamento "+prefs.offset()); }
-    @Override protected void onResume() { super.onResume(); updateStatus(); }
+    @Override protected void onResume() {
+        super.onResume();
+        updateStatus();
+        // Refresh integrations only on returning from settings, never while rendering status.
+        if (IslandService.running) startService(new Intent(this,IslandService.class).setAction(IslandService.REFRESH));
+    }
     private void updateStatus() {
         boolean access=getSystemService(NotificationManager.class).isNotificationListenerAccessGranted(new ComponentName(this,IslandNotificationListener.class));
         ((Button)findViewById(R.id.enable)).setText(IslandService.running ? "Desativar minha ilha" : "Ativar minha ilha");
         ((TextView)findViewById(R.id.service_status)).setText(IslandService.running ? "Ativa · toque na ilha para expandir" : "Desativada · pronta quando você quiser");
         ((TextView)findViewById(R.id.permissions_status)).setText("Sobreposição: "+(Settings.canDrawOverlays(this)?"permitida":"pendente")+"\nMídia e notificações: "+(access?"permitidas":"pendentes")+"\nAvisos do Dysland: "+(getSystemService(NotificationManager.class).areNotificationsEnabled()?"permitidos":"bloqueados"));
-        if (IslandService.running) startService(new Intent(this,IslandService.class).setAction(IslandService.REFRESH));
     }
 }
