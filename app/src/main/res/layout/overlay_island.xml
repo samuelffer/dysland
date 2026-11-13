@@ -1,16 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/island_root" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="8dp" android:background="@drawable/island" android:clipToOutline="true">
-<LinearLayout android:id="@+id/compact_row" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal">
-<ImageView android:id="@+id/artwork" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_island" android:contentDescription="Atividade atual"/>
-<TextView android:id="@+id/island_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end" android:textSize="12sp" android:textColor="#F4F6FA"/>
-<ImageView android:id="@+id/status_icon" android:layout_width="20dp" android:layout_height="20dp" android:layout_marginStart="6dp" android:src="@drawable/ic_island" android:importantForAccessibility="no"/>
+    <LinearLayout android:id="@+id/compact_row" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal">
+        <ImageView android:id="@+id/artwork" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_island" android:contentDescription="@string/overlay_island_1" />
+        <TextView android:id="@+id/island_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end" android:textSize="12sp" android:textColor="#F4F6FA" />
+        <ImageView android:id="@+id/status_icon" android:layout_width="20dp" android:layout_height="20dp" android:layout_marginStart="6dp" android:src="@drawable/ic_island" android:importantForAccessibility="no" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/expanded_content" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+        <TextView android:id="@+id/island_subtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="#A9B4C5" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+        <LinearLayout android:id="@+id/actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal">
+            <ImageButton android:id="@+id/action_primary" android:layout_width="52dp" android:layout_height="52dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_play" android:contentDescription="@string/overlay_island_2" />
+            <ImageButton android:id="@+id/action_secondary" android:layout_width="52dp" android:layout_height="52dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_next" android:contentDescription="@string/overlay_island_3" />
+            <Button android:id="@+id/notification_action" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/overlay_island_4" android:textColor="#CAEF80" style="?android:attr/borderlessButtonStyle" />
+            <ImageButton android:id="@+id/collapse" android:layout_width="48dp" android:layout_height="48dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_close" android:contentDescription="@string/overlay_island_5" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/notification_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+    </LinearLayout>
 </LinearLayout>
-<LinearLayout android:id="@+id/expanded_content" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-<TextView android:id="@+id/island_subtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="#A9B4C5" android:textSize="13sp" android:maxLines="2" android:ellipsize="end"/>
-<LinearLayout android:id="@+id/actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal">
-<ImageButton android:id="@+id/action_primary" android:layout_width="52dp" android:layout_height="52dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_play" android:contentDescription="Reproduzir ou pausar"/>
-<ImageButton android:id="@+id/action_secondary" android:layout_width="52dp" android:layout_height="52dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_next" android:contentDescription="Próxima faixa"/>
-<Button android:id="@+id/notification_action" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Abrir" android:textColor="#CAEF80" style="?android:attr/borderlessButtonStyle"/>
-<ImageButton android:id="@+id/collapse" android:layout_width="48dp" android:layout_height="48dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_close" android:contentDescription="Recolher ilha"/>
-</LinearLayout>
-<LinearLayout android:id="@+id/notification_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
-</LinearLayout></LinearLayout>

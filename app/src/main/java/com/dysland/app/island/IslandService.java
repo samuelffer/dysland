@@ -3,11 +3,10 @@ package com.dysland.app.island;
 import android.app.*;
 import android.content.*;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
-import android.hardware.display.DisplayManager;
 import android.media.*;
 import android.media.session.*;
+import android.media.session.MediaController;
 import android.os.*;
 import android.provider.Settings;
 import android.view.*;
@@ -16,8 +15,6 @@ import com.dysland.app.MainActivity;
 import com.dysland.app.R;
 import com.dysland.app.data.*;
 import com.dysland.app.integration.MediaBridge;
-import java.util.ArrayList;
-import java.util.List;
 
 /** User-started foreground overlay. No boot receiver, hidden restart, wake lock or internet. */
 public final class IslandService extends Service {
@@ -52,7 +49,9 @@ public final class IslandService extends Service {
                 Notification done=new Notification.Builder(IslandService.this,"timers")
                     .setSmallIcon(R.drawable.ic_timer).setContentTitle("Tempo concluído")
                     .setContentText("Seu temporizador Dysland chegou ao fim.").setContentIntent(openApp()).setAutoCancel(true).build();
-                getSystemService(NotificationManager.class).notify(2,done);
+                if (Build.VERSION.SDK_INT < 33 || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    getSystemService(NotificationManager.class).notify(2,done);
+                }
             }
             render();
             handler.postDelayed(this,timeStart>=0 || expanded ? 1000 : 3000);
