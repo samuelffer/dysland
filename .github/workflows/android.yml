@@ -33,7 +33,7 @@ jobs:
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Android 35 instrumentation smoke tests
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@324029e2f414c084d8b15ba075288885e74aef9c # v2.34.0 (SDK 35 toolchain)
         with:
           api-level: 35
           target: google_apis
