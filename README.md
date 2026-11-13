@@ -1,20 +1,24 @@
 # Dysland
 
-Uma ilha de atividades para Android, inspirada na ergonomia da One UI, com identidade própria: superfícies claras, lavanda, tipografia Manrope, grandes títulos e cartões arredondados. **Prévia nativa 0.2.1, não um clone com APIs privadas.**
+Uma ilha de atividades para Android, inspirada na ergonomia da One UI, com identidade própria: superfícies escuras, acentos personalizáveis, tipografia Manrope, grandes títulos e cartões arredondados. **Prévia nativa 0.3.0, não um clone com APIs privadas.**
 
 ## Download e validação
 
-[**Baixar Dysland 0.2.1 · APK debug em ZIP · Android 9+**](https://github.com/samuelffer/dysland/raw/refs/heads/arena/7e2b3c57-dysland/Zips/dysland-0.2.1-android-debug.zip)
+[**Baixar Dysland 0.3.0 · APK debug em ZIP · Android 9+**](https://github.com/samuelffer/dysland/raw/refs/heads/arena/7e2b3c57-dysland/Zips/dysland-0.3.0-android-debug.zip)
 
-A versão 0.2.1 passou por build debug/release, lint, 10 testes JVM e 7 testes instrumentados Android 15 com animações habilitadas (incluindo frame real da sobreposição e comandos de MediaSession). [Evidências, checksums e artifacts](docs/VALIDATION-0.2.1.md). [Design e referências pesquisadas](docs/DESIGN-0.2.md). Não testado em Samsung físico nem com chamadas/Bluetooth reais.
+A versão 0.3.0 está em validação. Evidências serão registradas após o build. [Design e referências pesquisadas](docs/DESIGN-0.2.md). Não testado em Samsung físico nem com chamadas/Bluetooth reais.
 
-## Novo na 0.2
+## Novo na 0.3
+
+Modo escuro, quatro acentos, ícone fornecido pelo usuário, espessura relativa à câmera e calibração em pixels. Player com timeline/seek e faixa anterior. Carga em dois estágios e navegação com distância/manobra via notificação. Galeria compacta/expandida usando o renderer real. [Pesquisa e decisões](docs/DESIGN-0.3.md).
+
+## Base da 0.2
 
 - Repouso fundido ao círculo da câmera; detecção de cutout em coordenadas da tela no Android 11+ e alinhamento manual em versões anteriores.
 - Transições de janela por molas analíticas, contínuas mesmo ao interromper uma expansão.
 - Disco/capa circular em rotação e três barras animadas em reprodução, suspensos em pausa, tela apagada e movimento reduzido.
 - Interface clara inteiramente refeita, navegação Ilha / Atividades / Ajustes e prévia interativa explicitamente identificada.
-- ZIPs anteriores preservados em `Zips/`. A 0.2.1 substitui a 0.2.0, corrigindo pesos de fonte, encaixe na barra de status e validação de captura.
+- ZIPs anteriores preservados em `Zips/`. A 0.3.0 substitui a 0.2.0, corrigindo pesos de fonte, encaixe na barra de status e validação de captura.
 
 ## Produto
 

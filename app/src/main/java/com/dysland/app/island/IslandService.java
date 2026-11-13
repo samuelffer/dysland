@@ -16,6 +16,8 @@ import com.dysland.app.R;
 import com.dysland.app.data.*;
 import com.dysland.app.integration.MediaBridge;
 import com.dysland.app.motion.PlaybackMotion;
+import com.dysland.app.presentation.IslandPresentation;
+import com.dysland.app.presentation.MediaPanel;
 import android.animation.ValueAnimator;
 
 /** User-started foreground overlay. No boot receiver, hidden restart, wake lock or internet. */
@@ -29,6 +31,7 @@ public final class IslandService extends Service {
     private View island;
     private WindowManager.LayoutParams layout;
     private MediaBridge media;
+    private MediaPanel mediaPanel;
     private boolean expanded, attached, receiverRegistered, audioRegistered, destroyed;
     private boolean lastCharging, batteryKnown, lowNotified;
     private boolean screenOn=true;
@@ -45,7 +48,7 @@ public final class IslandService extends Service {
     private float desiredAlpha=-1f;
     private String lastMediaTitle="";
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener preferenceListener=(p,k) -> render();
-    private final Runnable collapseTask=() -> { expanded=false; render(); };
+    private final Runnable collapseTask=() -> { if(mediaPanel!=null && mediaPanel.isDragging()) { scheduleCollapse();return; } expanded=false; render(); };
     private final Runnable tick=new Runnable() {
         @Override public void run() {
             if (destroyed) return;
@@ -63,7 +66,7 @@ public final class IslandService extends Service {
                 }
             }
             render();
-            handler.postDelayed(this,timeStart>=0 || expanded ? 1000 : 3000);
+            handler.postDelayed(this,timeStart>=0 || expanded || current!=null && "charge_intro".equals(current.key) ? 1000 : 3000);
         }
     };
     private final BroadcastReceiver signals=new BroadcastReceiver() {
@@ -75,7 +78,15 @@ public final class IslandService extends Service {
                 int level=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,0), scale=intent.getIntExtra(BatteryManager.EXTRA_SCALE,100);
                 int percent=scale>0 ? Math.round(level*100f/scale) : 0;
                 boolean charging=intent.getIntExtra(BatteryManager.EXTRA_PLUGGED,0)!=0;
-                if (charging && (!batteryKnown || !lastCharging)) flash("charge","Carregando · "+percent+"%","Energia conectada ao aparelho",R.drawable.ic_battery);
+                if(charging) {
+                    ActivityStore.Event status=new ActivityStore.Event("charge_status","Carregando · "+percent+"%","Energia conectada ao aparelho",R.drawable.ic_charge,20);
+                    status.kind="charging";status.compactText=percent+"%";status.source="ENERGIA";ActivityStore.INSTANCE.put(status);
+                    if(!batteryKnown || !lastCharging) {
+                        ActivityStore.Event intro=new ActivityStore.Event("charge_intro",status.title,"Carregador conectado. O aviso recolhe para um indicador discreto.",R.drawable.ic_charge,85);
+                        intro.kind="charging";intro.compactText=percent+"%";intro.source="ENERGIA";
+                        intro.expires=SystemClock.elapsedRealtime()+4000;ActivityStore.INSTANCE.put(intro);
+                    }
+                } else { ActivityStore.INSTANCE.remove("charge_status");ActivityStore.INSTANCE.remove("charge_intro"); }
                 if (percent<=15 && !charging && !lowNotified) { flash("low","Bateria baixa · "+percent+"%","Hora de recarregar",R.drawable.ic_battery); lowNotified=true; }
                 if (percent>20 || charging) lowNotified=false;
                 batteryKnown=true; lastCharging=charging;
@@ -140,12 +151,14 @@ public final class IslandService extends Service {
         island.setOnLongClickListener(v -> { startActivity(new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return true; });
         island.findViewById(R.id.collapse).setOnClickListener(v -> { expanded=false; render(); });
         island.findViewById(R.id.action_primary).setOnClickListener(v -> { media.toggle(); scheduleCollapse(); });
+        island.findViewById(R.id.action_previous).setOnClickListener(v -> { media.previous();scheduleCollapse(); });
         island.findViewById(R.id.action_secondary).setOnClickListener(v -> { media.next(); scheduleCollapse(); });
         island.findViewById(R.id.notification_action).setOnClickListener(v -> {
             if (current!=null && "time".equals(current.key)) { timeStart=-1; duration=0; render(); }
             else if (current!=null && current.open!=null) send(current.open);
         });
         media=new MediaBridge(this,this::render);
+        mediaPanel=new MediaPanel(island,position -> { media.seekTo(position);scheduleCollapse(); });
         ActivityStore.INSTANCE.observer=this::render;
         prefs.values.registerOnSharedPreferenceChangeListener(preferenceListener);
         IntentFilter filter=new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
@@ -172,6 +185,7 @@ public final class IslandService extends Service {
     }
     private void flash(String key,String title,String detail,int icon) {
         ActivityStore.Event event=new ActivityStore.Event(key,title,detail,icon,85);
+        event.compactText="low".equals(key) ? "Bateria baixa" : "Conectado";
         event.expires=SystemClock.elapsedRealtime()+6500; ActivityStore.INSTANCE.put(event);
     }
     private void scheduleCollapse() { handler.removeCallbacks(collapseTask); if (expanded) handler.postDelayed(collapseTask,10000); }
@@ -180,7 +194,7 @@ public final class IslandService extends Service {
         if (!attached || destroyed) return;
         if (!Settings.canDrawOverlays(this)) { stopSelf(); return; }
         long now=SystemClock.elapsedRealtime();
-        ActivityStore.Event best=ActivityStore.INSTANCE.top(now,prefs.enabled("notifications_enabled"),prefs.enabled("events_enabled"));
+        ActivityStore.Event best=ActivityStore.INSTANCE.top(now,prefs.enabled("notifications_enabled"),prefs.enabled("events_enabled"),prefs.enabled("navigation_enabled"));
         if (timeStart>=0 && (best==null || best.priority<80)) best=new ActivityStore.Event("time",TimeState.format(TimeState.seconds(now,timeStart,duration)),duration>0 ? "Temporizador em andamento" : "Cronômetro em andamento",R.drawable.ic_timer,80);
         currentMedia=null;
         MediaController controller=media==null ? null : media.current();
@@ -191,9 +205,10 @@ public final class IslandService extends Service {
             if (metadata!=null) {
                 String title=metadata.getString(MediaMetadata.METADATA_KEY_TITLE);
                 String artist=metadata.getString(MediaMetadata.METADATA_KEY_ARTIST);
-                best=new ActivityStore.Event("media",title==null ? "Sua música" : title,artist==null ? "Controle de mídia" : artist,R.drawable.ic_music,50);
+                best=new ActivityStore.Event("media",title==null ? "Sua música" : title,artist==null ? "Controle de mídia" : artist,R.drawable.record_art,50);
                 best.art=metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
                 if (best.art==null) best.art=metadata.getBitmap(MediaMetadata.METADATA_KEY_ART);
+                best.kind="media";
                 currentMedia=controller; best.open=controller.getSessionActivity();
             }
         }
@@ -244,6 +259,10 @@ public final class IslandService extends Service {
         if (best!=null && best.art!=null) artwork.setImageBitmap(best.art); else artwork.setImageResource(best==null ? R.drawable.ic_island : best.icon);
         ((ImageView)island.findViewById(R.id.status_icon)).setImageResource(currentMedia!=null ? MediaBridge.playing(currentMedia) ? R.drawable.ic_pause : R.drawable.ic_play : R.drawable.ic_island);
         boolean isMedia=currentMedia!=null;
+        IslandPresentation.details(island,best,isMedia,expanded,privateContent);
+        IslandPresentation.arrival(island,best,animations);
+        if(isMedia && mediaPanel!=null) mediaPanel.update(media.position(),media.duration(),MediaBridge.supports(currentMedia,PlaybackState.ACTION_SEEK_TO));
+        island.findViewById(R.id.action_previous).setEnabled(MediaBridge.supports(currentMedia,PlaybackState.ACTION_SKIP_TO_PREVIOUS));
         if (isMedia && !best.title.equals(lastMediaTitle)) {
             lastMediaTitle=best.title;
             artwork.animate().cancel(); artwork.setAlpha(animations ? 0f : 1f);
@@ -256,8 +275,6 @@ public final class IslandService extends Service {
         if (playbackMotion!=null) playbackMotion.setPlaying(isMedia && MediaBridge.playing(currentMedia),animations);
         island.findViewById(R.id.compact_row).setVisibility(View.VISIBLE);
         if (expanded) island.findViewById(R.id.expanded_content).setVisibility(View.VISIBLE);
-        LinearLayout.LayoutParams row=(LinearLayout.LayoutParams)island.findViewById(R.id.compact_row).getLayoutParams();
-        row.height=dp(prefs.height()-16); island.findViewById(R.id.compact_row).setLayoutParams(row);
         ImageButton primary=island.findViewById(R.id.action_primary), secondary=island.findViewById(R.id.action_secondary);
         primary.setVisibility(currentMedia==null ? View.GONE : View.VISIBLE); secondary.setVisibility(currentMedia==null ? View.GONE : View.VISIBLE);
         boolean playing=MediaBridge.playing(currentMedia);
@@ -266,7 +283,7 @@ public final class IslandService extends Service {
         primary.setEnabled(MediaBridge.supports(currentMedia,playing ? PlaybackState.ACTION_PAUSE : PlaybackState.ACTION_PLAY) || MediaBridge.supports(currentMedia,PlaybackState.ACTION_PLAY_PAUSE));
         secondary.setEnabled(MediaBridge.supports(currentMedia,PlaybackState.ACTION_SKIP_TO_NEXT));
         Button open=island.findViewById(R.id.notification_action);
-        open.setVisibility(best!=null && (best.open!=null || "time".equals(best.key)) ? View.VISIBLE : View.GONE);
+        open.setVisibility(best!=null && !isMedia && (best.open!=null || "time".equals(best.key)) ? View.VISIBLE : View.GONE);
         open.setText(best!=null && "time".equals(best.key) ? "Encerrar" : "Abrir");
         LinearLayout actions=island.findViewById(R.id.notification_actions);
         actions.removeAllViews();
@@ -282,19 +299,9 @@ public final class IslandService extends Service {
         if (Build.VERSION.SDK_INT>=30) screenWidth=windows.getMaximumWindowMetrics().getBounds().width();
         float density=getResources().getDisplayMetrics().density;
         CameraAnchor camera=CameraAnchor.resolve(Build.VERSION.SDK_INT>=30 ? windows.getMaximumWindowMetrics().getWindowInsets() : null,screenWidth,density,prefs);
-        int compactHeight=Math.max(dp(prefs.height()),Math.round(camera.diameter)+dp(8));
-        int width=idle ? Math.round(camera.diameter) : Math.min(dp(expanded ? Math.max(330,prefs.width()) : prefs.width()),screenWidth-dp(20));
-        FrameLayout.LayoutParams label=(FrameLayout.LayoutParams)island.findViewById(R.id.island_title).getLayoutParams();
-        label.width=Math.max(0,(width-Math.round(camera.diameter))/2-dp(16));
-        island.findViewById(R.id.island_title).setLayoutParams(label);
-        int padding=idle ? 0 : dp(expanded ? 16 : 8);
-        island.setPadding(padding,expanded ? Math.round(camera.diameter)+dp(8) : padding,padding,padding);
-        int height;
-        if (idle) height=Math.round(camera.diameter);
-        else if (expanded) {
-            island.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
-            height=island.getMeasuredHeight();
-        } else height=compactHeight;
+        int compactHeight=IslandPresentation.compactHeight(camera.diameter,density,prefs.extraHeight());
+        int width=idle ? Math.round(camera.diameter) : Math.min(expanded ? dp(Math.max(330,prefs.width())) : IslandPresentation.compactWidth(best,prefs,density),screenWidth-dp(20));
+        int height=IslandPresentation.geometry(island,prefs,camera.diameter,density,width,expanded,idle);
         int left=Math.round(camera.x-width/2f);
         left=Math.max(0,Math.min(screenWidth-width,left));
         int offset=left+width/2-screenWidth/2;

@@ -6,12 +6,14 @@ import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import com.dysland.app.R;
 import com.dysland.app.data.ActivityStore;
+import com.dysland.app.data.NavigationText;
 
 /** Public notification bridge; no accessibility service, scraping or private APIs. */
 public final class IslandNotificationListener extends NotificationListenerService {
     @Override public void onListenerConnected() {
         ActivityStore.INSTANCE.clearNotifications();
-        for (StatusBarNotification sbn : getActiveNotifications()) onNotificationPosted(sbn);
+        StatusBarNotification[] active=getActiveNotifications();
+        if(active!=null) for (StatusBarNotification sbn : active) onNotificationPosted(sbn);
     }
     @Override public void onListenerDisconnected() { ActivityStore.INSTANCE.clearNotifications(); }
     @Override public void onNotificationPosted(StatusBarNotification sbn) {
@@ -39,6 +41,22 @@ public final class IslandNotificationListener extends NotificationListenerServic
                 call ? 100 : navigation ? 60 : 40);
         // Secret notifications are not surfaced by this overlay at all.
         if (n.visibility == Notification.VISIBILITY_SECRET) { ActivityStore.INSTANCE.remove(key); return; }
+        if(navigation) {
+            event.kind="navigation";
+            java.util.LinkedHashSet<String> details=new java.util.LinkedHashSet<>();
+            for(String field:new String[]{Notification.EXTRA_TEXT,Notification.EXTRA_BIG_TEXT,Notification.EXTRA_SUB_TEXT}) {
+                CharSequence value=extras.getCharSequence(field);
+                if(value!=null && value.length()>0) details.add(value.toString());
+            }
+            CharSequence[] lines=extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+            if(lines!=null) for(CharSequence line:lines) if(line!=null && line.length()>0) details.add(line.toString());
+            event.subtitle=String.join(" • ",details);
+            if(event.subtitle.length()>600) event.subtitle=event.subtitle.substring(0,600);
+            event.compactText=NavigationText.distance(event.title+" "+event.subtitle);
+            int turn=NavigationText.turn(event.title+" "+event.subtitle);
+            event.icon=turn<0 ? R.drawable.ic_turn_left : turn>0 ? R.drawable.ic_turn_right : R.drawable.ic_location;
+            event.source="NAVEGAÇÃO · "+label;
+        } else if(call) { event.kind="call";event.compactText="Chamada"; }
         event.open = n.contentIntent;
         event.actions = n.actions;
         ActivityStore.INSTANCE.put(event);

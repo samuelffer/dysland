@@ -14,6 +14,7 @@ import android.provider.Settings;
 import android.view.View;
 import android.animation.ValueAnimator;
 import com.dysland.app.motion.PreviewController;
+import com.dysland.app.presentation.ThemePalette;
 import android.widget.*;
 import com.dysland.app.data.Preferences;
 import com.dysland.app.integration.IslandNotificationListener;
@@ -28,10 +29,12 @@ public final class MainActivity extends Activity {
     private final int[] pageIds={R.id.page_home,R.id.page_activities,R.id.page_settings};
     private final int[] navIds={R.id.nav_home,R.id.nav_activities,R.id.nav_settings};
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
         prefs=new Preferences(this);
+        setTheme(ThemePalette.style(prefs.number("theme",0)));
+        super.onCreate(state);
         setContentView(R.layout.activity_main);
         View root=findViewById(R.id.root);
+        ThemePalette.app(root,prefs.number("theme",0));
         root.setOnApplyWindowInsetsListener((v,insets) -> {
             v.setPadding(0,insets.getSystemWindowInsetTop(),0,insets.getSystemWindowInsetBottom());
             return insets;
@@ -68,7 +71,8 @@ public final class MainActivity extends Activity {
             }
             else startIsland(IslandService.START,0);
         });
-        preview=new PreviewController(findViewById(R.id.preview_island));
+        preview=new PreviewController(findViewById(R.id.preview_island),prefs);
+        preview.configure(false,prefs.enabled("reduce_motion"));
         preview.show(1);
         findViewById(R.id.demo_idle).setOnClickListener(v -> preview.show(0));
         findViewById(R.id.demo_music).setOnClickListener(v -> preview.show(1));
@@ -80,8 +84,9 @@ public final class MainActivity extends Activity {
             android.transition.TransitionManager.beginDelayedTransition((android.view.ViewGroup)group.getParent(),new android.transition.AutoTransition().setDuration(prefs.enabled("reduce_motion") ? 0 : 260));
             group.setVisibility(group.getVisibility()==View.VISIBLE ? View.GONE : View.VISIBLE);
         });
+        setupGalleryAndTheme();
         setupGeometry();
-        bindSwitch(R.id.camera_auto,"camera_auto"); bindSwitch(R.id.reduce_motion,"reduce_motion");
+        bindSwitch(R.id.camera_auto,"camera_auto"); bindSwitch(R.id.camera_size_auto,"camera_size_auto"); bindSwitch(R.id.navigation_enabled,"navigation_enabled"); bindSwitch(R.id.reduce_motion,"reduce_motion");
         bindSwitch(R.id.hide_lock,"hide_lock"); bindSwitch(R.id.show_idle,"show_idle");
         bindSwitch(R.id.show_content,"show_content"); bindSwitch(R.id.media_enabled,"media_enabled");
         bindSwitch(R.id.events_enabled,"events_enabled"); bindSwitch(R.id.notifications_enabled,"notifications_enabled");
@@ -125,18 +130,46 @@ public final class MainActivity extends Activity {
             @Override public void onItemSelected(AdapterView<?> parent,View v,int position,long id) {
                 if (position==0 || binding) return;
                 prefs.set("width", position==3 ? 210 : 190);
-                prefs.set("height", position==3 ? 48 : 44);
+                prefs.set("compact_extra",position==3 ? 8 : 6);
                 prefs.set("top",position==1 ? 6 : 8);
                 prefs.set("offset",position==5 ? -150 : 0);
                 syncGeometry();
             }
         });
         setupSeek(R.id.width,"width",140); setupSeek(R.id.top,"top",0);
-        setupSeek(R.id.offset,"offset",-220); setupSeek(R.id.camera_diameter,"camera_diameter",10); setupSeek(R.id.height,"height",40);
+        setupSeek(R.id.offset,"offset",-220); setupSeek(R.id.camera_diameter,"camera_diameter",10); setupSeek(R.id.height,"compact_extra",0); setupSeek(R.id.fine_x,"fine_x",-40); setupSeek(R.id.fine_y,"fine_y",-40); setupSeek(R.id.fine_diameter,"diameter_px",-12);
         findViewById(R.id.reset_geometry).setOnClickListener(v -> {
-            prefs.set("camera_diameter",16); prefs.set("width",190); prefs.set("height",44); prefs.set("top",8); prefs.set("offset",0); syncGeometry(); spinner.setSelection(0);
+            prefs.set("camera_diameter",16); prefs.set("width",190); prefs.set("compact_extra",6); prefs.set("fine_x",0); prefs.set("fine_y",0); prefs.set("diameter_px",0); prefs.set("top",8); prefs.set("offset",0); syncGeometry(); spinner.setSelection(0);
         });
+        for(String axis:new String[]{"x","y"}) {
+            int minus="x".equals(axis) ? R.id.fine_x_minus : R.id.fine_y_minus;
+            int plus="x".equals(axis) ? R.id.fine_x_plus : R.id.fine_y_plus;
+            findViewById(minus).setOnClickListener(v -> nudge(axis,-1));
+            findViewById(plus).setOnClickListener(v -> nudge(axis,1));
+        }
         syncGeometry();
+    }
+    private void nudge(String axis,int delta) {
+        prefs.set("fine_"+axis,Math.max(-40,Math.min(40,prefs.number("fine_"+axis,0)+delta)));syncGeometry();
+    }
+    private void setupGalleryAndTheme() {
+        Spinner gallery=findViewById(R.id.preview_kind);
+        gallery.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Câmera","Música","Temporizador","Cronômetro","Carregamento · chegada","Carregamento · discreto","Bateria baixa","Bluetooth","GPS · manobra","Chamada","Gravação · notificação","Entrega · notificação"}));
+        gallery.setSelection(1);
+        gallery.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onNothingSelected(AdapterView<?> p) {}
+            public void onItemSelected(AdapterView<?> p,View v,int position,long id) { preview.show(position); }
+        });
+        ((Switch)findViewById(R.id.preview_expanded)).setOnCheckedChangeListener((v,checked) -> preview.expand(checked));
+        Spinner theme=findViewById(R.id.theme_picker);
+        theme.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"AMOLED · Lavanda","AMOLED · Esmeralda","AMOLED · Ártico","AMOLED · Âmbar"}));
+        theme.setSelection(prefs.number("theme",0));
+        theme.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onNothingSelected(AdapterView<?> p) {}
+            public void onItemSelected(AdapterView<?> p,View v,int position,long id) {
+                if(position!=prefs.number("theme",0)) { prefs.set("theme",position);recreate(); }
+            }
+        });
     }
     private void setupSeek(int id,String key,int base) {
         ((SeekBar)findViewById(id)).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -150,11 +183,17 @@ public final class MainActivity extends Activity {
     private void syncGeometry() {
         ((SeekBar)findViewById(R.id.camera_diameter)).setProgress(prefs.number("camera_diameter",16)-10);
         ((SeekBar)findViewById(R.id.width)).setProgress(prefs.width()-140);
-        ((SeekBar)findViewById(R.id.height)).setProgress(prefs.height()-40);
+        ((SeekBar)findViewById(R.id.height)).setProgress(prefs.extraHeight());
+        ((SeekBar)findViewById(R.id.fine_diameter)).setProgress(prefs.number("diameter_px",0)+12);
+        ((SeekBar)findViewById(R.id.fine_x)).setProgress(prefs.fineX()+40);
+        ((SeekBar)findViewById(R.id.fine_y)).setProgress(prefs.fineY()+40);
         ((SeekBar)findViewById(R.id.top)).setProgress(prefs.top());
         ((SeekBar)findViewById(R.id.offset)).setProgress(prefs.offset()+220); geometryLabel();
     }
-    private void geometryLabel() { ((TextView)findViewById(R.id.geometry_label)).setText(prefs.width()+" × "+prefs.height()+" dp · topo "+prefs.top()+" · deslocamento "+prefs.offset()); }
+    private void geometryLabel() {
+        ((TextView)findViewById(R.id.geometry_label)).setText("Largura "+prefs.width()+" dp · espessura = câmera + "+prefs.extraHeight()+" dp\nCorreção fina: X "+prefs.fineX()+" px · Y "+prefs.fineY()+" px · diâmetro "+prefs.number("diameter_px",0)+" px");
+        if(preview!=null) preview.refresh();
+    }
     @Override protected void onResume() {
         super.onResume();
         resumed=true;
@@ -175,7 +214,7 @@ public final class MainActivity extends Activity {
         for (int i=0;i<pageIds.length;i++) {
             View page=findViewById(pageIds[i]); page.animate().cancel();
             page.setVisibility(i==pageIndex ? View.VISIBLE : View.GONE);
-            findViewById(navIds[i]).setBackgroundTintList(android.content.res.ColorStateList.valueOf(i==pageIndex ? 0xFFE9E5FC : 0xFFFFFFFF));
+            findViewById(navIds[i]).setBackgroundTintList(android.content.res.ColorStateList.valueOf(i==pageIndex ? 0xFF343044 : 0xFF191A22));
         }
         View selected=findViewById(pageIds[pageIndex]);
         boolean motion=!prefs.enabled("reduce_motion") && ValueAnimator.areAnimatorsEnabled();

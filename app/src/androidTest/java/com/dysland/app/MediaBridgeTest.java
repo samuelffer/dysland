@@ -30,16 +30,19 @@ public final class MediaBridgeTest {
         shell("cmd notification allow_listener com.dysland.app/com.dysland.app.integration.IslandNotificationListener");
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         final MediaSession[] session=new MediaSession[1]; final MediaBridge[] bridge=new MediaBridge[1];
-        CountDownLatch pause=new CountDownLatch(1),next=new CountDownLatch(1);
+        CountDownLatch pause=new CountDownLatch(1),next=new CountDownLatch(1),previous=new CountDownLatch(1),seek=new CountDownLatch(1);
+        final long[] sought={-1};
         try (ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> {
                 session[0]=new MediaSession(context,"Dysland integration test");
                 session[0].setCallback(new MediaSession.Callback() {
                     @Override public void onPause() { pause.countDown(); }
+                    @Override public void onSkipToPrevious() { previous.countDown(); }
+                    @Override public void onSeekTo(long value) { sought[0]=value;seek.countDown(); }
                     @Override public void onSkipToNext() { next.countDown(); }
                 });
-                session[0].setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,"Sessão de teste").build());
-                session[0].setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY|PlaybackState.ACTION_PAUSE|PlaybackState.ACTION_SKIP_TO_NEXT).setState(PlaybackState.STATE_PLAYING,0,1).build());
+                session[0].setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,"Sessão de teste").putLong(MediaMetadata.METADATA_KEY_DURATION,240000).build());
+                session[0].setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY|PlaybackState.ACTION_PAUSE|PlaybackState.ACTION_SKIP_TO_NEXT|PlaybackState.ACTION_SKIP_TO_PREVIOUS|PlaybackState.ACTION_SEEK_TO).setState(PlaybackState.STATE_PLAYING,0,1).build());
                 session[0].setActive(true);
                 bridge[0]=new MediaBridge(context,() -> { });
             });
@@ -49,10 +52,11 @@ public final class MediaBridgeTest {
                 assertNotNull(bridge[0].current());
                 assertEquals("Sessão de teste",bridge[0].current().getMetadata().getString(MediaMetadata.METADATA_KEY_TITLE));
                 assertTrue(MediaBridge.playing(bridge[0].current()));
-                bridge[0].toggle();bridge[0].next();
+                bridge[0].toggle();bridge[0].next();bridge[0].previous();bridge[0].seekTo(123000);
             });
             assertTrue("Pause command delivered to session",pause.await(3,TimeUnit.SECONDS));
             assertTrue("Next command delivered to session",next.await(3,TimeUnit.SECONDS));
+            assertTrue(previous.await(3,TimeUnit.SECONDS));assertTrue(seek.await(3,TimeUnit.SECONDS));assertEquals(123000,sought[0]);
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
                 if(bridge[0]!=null) bridge[0].close();if(session[0]!=null) session[0].release();

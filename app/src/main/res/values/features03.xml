@@ -1,0 +1,18 @@
+<resources>
+    <string name="seek_track">Posição na faixa</string>
+    <string name="previous_track">Faixa anterior</string>
+    <string name="theme_select">Cor de destaque</string>
+    <string name="preview_select">Função para demonstrar</string>
+    <string name="preview_expand">Expandir prévia</string>
+    <string name="fine_x">Ajuste fino horizontal · pixels físicos</string>
+    <string name="fine_y">Ajuste fino vertical · pixels físicos</string>
+    <string name="fine_minus">Diminuir um pixel</string>
+    <string name="fine_plus">Aumentar um pixel</string>
+    <string name="height_relative">Espessura extra além da câmera · 0–28 dp</string>
+    <string name="camera_size_auto">Usar diâmetro detectado</string>
+    <string name="camera_size_hint">Desative para definir o diâmetro manual sem perder a detecção da posição.</string>
+    <string name="navigation_enabled">Navegação</string>
+    <string name="navigation_hint">Manobras e distância publicadas pelo app de GPS. Não rastreia sua localização.</string>
+    <string name="preview_note">Mesmos layouts e medidas da ilha real. Dados de demonstração; a prévia expandida é reduzida proporcionalmente para caber no cartão.</string>
+    <string name="fine_diameter_label">Correção fina do diâmetro · ±12 pixels</string>
+</resources>

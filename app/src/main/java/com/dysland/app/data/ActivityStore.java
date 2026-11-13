@@ -13,6 +13,7 @@ public final class ActivityStore {
     public static final ActivityStore INSTANCE = new ActivityStore();
     public static final class Event {
         public String key, title, subtitle;
+        public String kind="activity", compactText, source="";
         public int icon, priority;
         public long expires;
         public Bitmap art;
@@ -28,11 +29,12 @@ public final class ActivityStore {
     public void put(Event event) { main.post(() -> { events.remove(event.key); events.put(event.key,event); changed(); }); }
     public void remove(String key) { main.post(() -> { events.remove(key); changed(); }); }
     public void clearNotifications() { main.post(() -> { events.entrySet().removeIf(e -> e.getKey().startsWith("notification:")); changed(); }); }
-    public Event top(long now, boolean notifications, boolean signals) {
+    public Event top(long now, boolean notifications, boolean signals, boolean navigation) {
         events.values().removeIf(e -> e.expires > 0 && e.expires <= now);
         Event result = null;
         for (Event e : events.values()) {
-            if (e.key.startsWith("notification:") ? !notifications : !signals) continue;
+            if ("navigation".equals(e.kind)) { if(!navigation) continue; }
+            else if (e.key.startsWith("notification:") ? !notifications : !signals) continue;
             if (result == null || e.priority >= result.priority) result=e;
         }
         return result;

@@ -27,10 +27,11 @@ public final class CameraAnchor {
         float x=screenWidth/2f, y=(8+prefs.number("camera_diameter",16)/2f)*density;
         if (hole!=null) {
             x=hole.exactCenterX(); y=hole.exactCenterY();
-            diameter=Math.max(diameter,Math.max(hole.width(),hole.height())+density*2);
+            if (prefs.enabled("camera_size_auto")) diameter=Math.max(hole.width(),hole.height());
         }
-        x+=prefs.offset()*density;
-        y+=(prefs.top()-8)*density;
+        diameter=Math.max(8*density,diameter+prefs.number("diameter_px",0));
+        x+=prefs.offset()*density+prefs.fineX();
+        y+=(prefs.top()-8)*density+prefs.fineY();
         return new CameraAnchor(x,Math.max(diameter/2,y),diameter,hole!=null);
     }
 }

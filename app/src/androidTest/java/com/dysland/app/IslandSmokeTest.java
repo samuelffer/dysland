@@ -14,6 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.dysland.app.island.IslandService;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import java.io.File;
@@ -30,6 +31,9 @@ public final class IslandSmokeTest {
              FileInputStream input=new FileInputStream(fd.getFileDescriptor())) {
             byte[] buffer=new byte[4096]; while (input.read(buffer)!=-1) { /* wait for shell completion */ }
         }
+    }
+    @Before public void resetPreferences() {
+        new com.dysland.app.data.Preferences(context).values.edit().clear().commit();
     }
     @After public void cleanup() {
         context.stopService(new Intent(context,IslandService.class));
@@ -136,10 +140,33 @@ public final class IslandSmokeTest {
             android.view.WindowMetrics metrics=manager.getMaximumWindowMetrics();
             float density=context.getResources().getDisplayMetrics().density;
             com.dysland.app.island.CameraAnchor camera=com.dysland.app.island.CameraAnchor.resolve(metrics.getWindowInsets(),metrics.getBounds().width(),density,prefs);
-            int height=Math.max(Math.round(prefs.height()*density),Math.round(camera.diameter+8*density));
+            int height=com.dysland.app.presentation.IslandPresentation.compactHeight(camera.diameter,density,prefs.extraHeight());
             assertEquals("No status bar offset may be added to the island",Math.max(0,Math.round(camera.y-height/2f)),actualTop,2);
         } finally {
             prefs.set("reduce_motion",false);
+        }
+    }
+    @Test public void fineCalibrationMovesExactlyOnePhysicalPixel() {
+        com.dysland.app.data.Preferences prefs=new com.dysland.app.data.Preferences(context);
+        com.dysland.app.island.CameraAnchor before=com.dysland.app.island.CameraAnchor.resolve(null,1080,3f,prefs);
+        prefs.set("fine_x",1);prefs.set("fine_y",1);
+        com.dysland.app.island.CameraAnchor after=com.dysland.app.island.CameraAnchor.resolve(null,1080,3f,prefs);
+        assertEquals(before.x+1,after.x,.001f);assertEquals(before.y+1,after.y,.001f);
+        assertEquals(48,com.dysland.app.presentation.IslandPresentation.compactHeight(48,3,0));
+    }
+    @Test public void eventGalleryUsesSharedExpandedContent() {
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(activity -> ((android.widget.Switch)activity.findViewById(R.id.preview_expanded)).setChecked(true));
+            for(int kind:new int[]{8,4,5,6,7,9,10,11,2,3,1,0}) {
+                scenario.onActivity(activity -> ((android.widget.Spinner)activity.findViewById(R.id.preview_kind)).setSelection(kind));
+                SystemClock.sleep(350);
+                scenario.onActivity(activity -> {
+                    com.dysland.app.data.ActivityStore.Event event=com.dysland.app.presentation.DemoEvents.event(kind);
+                    android.view.View preview=activity.findViewById(R.id.preview_island);
+                    assertEquals(event==null ? "Sua ilha, no seu ritmo." : event.title,((android.widget.TextView)preview.findViewById(R.id.expanded_title)).getText().toString());
+                    assertEquals(kind==1 ? android.view.View.VISIBLE : android.view.View.GONE,preview.findViewById(R.id.media_timeline).getVisibility());
+                });
+            }
         }
     }
 }

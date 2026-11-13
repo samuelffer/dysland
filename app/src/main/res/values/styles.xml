@@ -1,13 +1,16 @@
 <resources>
-    <style name="Theme.Dysland" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.Dysland" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">@font/manrope_family</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">#F5F5F9</item>
-        <item name="android:navigationBarColor">#F5F5F9</item>
-        <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:windowBackground">#F5F5F9</item>
-        <item name="android:colorAccent">#7463C7</item>
-        <item name="android:colorControlActivated">#7463C7</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#0B0C10</item>
+        <item name="android:navigationBarColor">#0B0C10</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">#0B0C10</item>
+        <item name="android:colorAccent">#C5B9FF</item>
+        <item name="android:colorControlActivated">#C5B9FF</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+    <style name="Theme.Dysland.Emerald"><item name="android:colorAccent">#60E5A1</item><item name="android:colorControlActivated">#60E5A1</item></style>
+    <style name="Theme.Dysland.Arctic"><item name="android:colorAccent">#70D8F5</item><item name="android:colorControlActivated">#70D8F5</item></style>
+    <style name="Theme.Dysland.Amber"><item name="android:colorAccent">#FFBB86</item><item name="android:colorControlActivated">#FFBB86</item></style>
 </resources>
