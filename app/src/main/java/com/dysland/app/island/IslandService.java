@@ -185,7 +185,7 @@ public final class IslandService extends Service {
     }
     private void flash(String key,String title,String detail,int icon) {
         ActivityStore.Event event=new ActivityStore.Event(key,title,detail,icon,85);
-        event.compactText="low".equals(key) ? "Bateria baixa" : "Conectado";
+        event.compactText="low".equals(key) ? title.substring(title.lastIndexOf('·')+1).trim() : "Conectado";
         event.expires=SystemClock.elapsedRealtime()+6500; ActivityStore.INSTANCE.put(event);
     }
     private void scheduleCollapse() { handler.removeCallbacks(collapseTask); if (expanded) handler.postDelayed(collapseTask,10000); }
