@@ -111,32 +111,35 @@ public final class IslandSmokeTest {
     }
     @Test public void overlayWindowUsesDisplayCoordinatesWithoutStatusBarInset() throws Exception {
         shell("appops set com.dysland.app SYSTEM_ALERT_WINDOW allow");
-        android.app.UiAutomation automation=instrumentation.getUiAutomation();
-        android.accessibilityservice.AccessibilityServiceInfo info=automation.getServiceInfo();
-        int originalFlags=info.flags;
-        info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
-        automation.setServiceInfo(info);
         com.dysland.app.data.Preferences prefs=new com.dysland.app.data.Preferences(context);
         prefs.set("reduce_motion",true);
         try (ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> activity.findViewById(R.id.stopwatch_start).performClick());
             SystemClock.sleep(1000);
-            android.graphics.Rect bounds=null;
-            for (android.view.accessibility.AccessibilityWindowInfo window:automation.getWindows()) {
-                if (window.getTitle()!=null && window.getTitle().toString().contains("Dysland · atividade")) {
-                    bounds=new android.graphics.Rect(); window.getBoundsInScreen(bounds); break;
-                }
+            // Application overlays are not guaranteed to appear in AccessibilityWindowInfo.
+            // Read the system's actual window frame through the test-only shell instead.
+            String dump;
+            try (ParcelFileDescriptor descriptor=instrumentation.getUiAutomation().executeShellCommand("dumpsys window windows");
+                 FileInputStream input=new FileInputStream(descriptor.getFileDescriptor());
+                 java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream()) {
+                byte[] buffer=new byte[4096];int count;
+                while((count=input.read(buffer))!=-1) output.write(buffer,0,count);
+                dump=output.toString(java.nio.charset.StandardCharsets.UTF_8.name());
             }
-            assertNotNull("Overlay must expose its actual interactive window",bounds);
+            int index=dump.indexOf("Dysland · atividade");
+            assertTrue("Overlay window must exist in the system dump",index>=0);
+            String section=dump.substring(index,Math.min(dump.length(),index+8000));
+            java.util.regex.Matcher frame=java.util.regex.Pattern.compile("frame=\\[(-?\\d+),(-?\\d+)\\]\\[(-?\\d+),(-?\\d+)\\]").matcher(section);
+            assertTrue("System must report the overlay frame: "+section,frame.find());
+            int actualTop=Integer.parseInt(frame.group(2));
             android.view.WindowManager manager=context.getSystemService(android.view.WindowManager.class);
             android.view.WindowMetrics metrics=manager.getMaximumWindowMetrics();
             float density=context.getResources().getDisplayMetrics().density;
             com.dysland.app.island.CameraAnchor camera=com.dysland.app.island.CameraAnchor.resolve(metrics.getWindowInsets(),metrics.getBounds().width(),density,prefs);
             int height=Math.max(Math.round(prefs.height()*density),Math.round(camera.diameter+8*density));
-            assertEquals("No status bar offset may be added to the island",Math.max(0,Math.round(camera.y-height/2f)),bounds.top,2);
+            assertEquals("No status bar offset may be added to the island",Math.max(0,Math.round(camera.y-height/2f)),actualTop,2);
         } finally {
             prefs.set("reduce_motion",false);
-            info.flags=originalFlags;automation.setServiceInfo(info);
         }
     }
 }
