@@ -1,2 +1,1 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Button xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="48dp" android:background="?android:attr/selectableItemBackground" android:textColor="#CAEF80" android:textAllCaps="false" />
+<Button xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="48dp" android:background="?android:attr/selectableItemBackground" android:textColor="#CAEF80" android:textAllCaps="false" android:stateListAnimator="@animator/press_feedback" />

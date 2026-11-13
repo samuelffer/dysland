@@ -125,7 +125,11 @@ public final class IslandService extends Service {
         motion=new IslandMotion(island,windows,layout);
         playbackMotion=new PlaybackMotion(island);
         island.setOnApplyWindowInsetsListener((v,insets) -> {
-            int hash=insets.getDisplayCutout()==null ? 0 : insets.getDisplayCutout().hashCode();
+            // Root cutout coordinates move with this window. Hash the display's stable
+            // insets instead, otherwise every spring frame would schedule a full render.
+            android.view.DisplayCutout displayCutout=Build.VERSION.SDK_INT>=30
+                    ? windows.getMaximumWindowMetrics().getWindowInsets().getDisplayCutout() : null;
+            int hash=displayCutout==null ? 0 : displayCutout.hashCode();
             if (hash!=cutoutHash) { cutoutHash=hash; handler.post(this::render); }
             return insets;
         });
@@ -278,6 +282,9 @@ public final class IslandService extends Service {
         CameraAnchor camera=CameraAnchor.resolve(Build.VERSION.SDK_INT>=30 ? windows.getMaximumWindowMetrics().getWindowInsets() : null,screenWidth,density,prefs);
         int compactHeight=Math.max(dp(prefs.height()),Math.round(camera.diameter)+dp(8));
         int width=idle ? Math.round(camera.diameter) : Math.min(dp(expanded ? Math.max(330,prefs.width()) : prefs.width()),screenWidth-dp(20));
+        FrameLayout.LayoutParams label=(FrameLayout.LayoutParams)island.findViewById(R.id.island_title).getLayoutParams();
+        label.width=Math.max(0,(width-Math.round(camera.diameter))/2-dp(16));
+        island.findViewById(R.id.island_title).setLayoutParams(label);
         int padding=idle ? 0 : dp(expanded ? 16 : 8);
         island.setPadding(padding,expanded ? Math.round(camera.diameter)+dp(8) : padding,padding,padding);
         int height;
