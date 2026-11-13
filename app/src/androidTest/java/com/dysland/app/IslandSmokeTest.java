@@ -74,4 +74,39 @@ public final class IslandSmokeTest {
             assertFalse(IslandService.running);
         }
     }
+    @Test public void previewAnimatesOnlyWhileVisibleAndStopsWithReducedMotion() {
+        try (ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            final float[] angles=new float[2];
+            scenario.onActivity(activity -> {
+                activity.findViewById(R.id.demo_music).performClick();
+                angles[0]=activity.findViewById(R.id.preview_island).findViewById(R.id.artwork).getRotation();
+            });
+            SystemClock.sleep(650);
+            scenario.onActivity(activity -> {
+                android.view.View preview=activity.findViewById(R.id.preview_island);
+                angles[1]=preview.findViewById(R.id.artwork).getRotation();
+                assertTrue("Disc should rotate during playback preview",Math.abs(angles[1]-angles[0])>1);
+                activity.findViewById(R.id.nav_settings).performClick();
+                ((android.widget.Switch)activity.findViewById(R.id.reduce_motion)).setChecked(true);
+                angles[0]=preview.findViewById(R.id.artwork).getRotation();
+            });
+            SystemClock.sleep(300);
+            scenario.onActivity(activity -> {
+                assertEquals(angles[0],activity.findViewById(R.id.preview_island).findViewById(R.id.artwork).getRotation(),.01f);
+                ((android.widget.Switch)activity.findViewById(R.id.reduce_motion)).setChecked(false);
+            });
+        }
+    }
+    @Test public void cameraUsesAbsoluteCutoutAndManualCorrections() {
+        com.dysland.app.data.Preferences prefs=new com.dysland.app.data.Preferences(context);
+        prefs.set("camera_auto",true); prefs.set("camera_diameter",16);prefs.set("top",8);prefs.set("offset",0);
+        android.view.DisplayCutout cutout=new android.view.DisplayCutout(new android.graphics.Rect(0,48,0,0),
+                java.util.Collections.singletonList(new android.graphics.Rect(516,8,564,56)));
+        android.view.WindowInsets insets=new android.view.WindowInsets.Builder().setDisplayCutout(cutout).build();
+        com.dysland.app.island.CameraAnchor anchor=com.dysland.app.island.CameraAnchor.resolve(insets,1080,3f,prefs);
+        assertTrue(anchor.detected); assertEquals(540,anchor.x,.01f);assertEquals(32,anchor.y,.01f);
+        prefs.set("offset",10);
+        assertEquals(570,com.dysland.app.island.CameraAnchor.resolve(insets,1080,3f,prefs).x,.01f);
+        prefs.set("offset",0);
+    }
 }

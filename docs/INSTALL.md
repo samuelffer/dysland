@@ -1,15 +1,15 @@
-# Instalar o Dysland 0.1.0 (prévia Android)
+# Instalar o Dysland 0.2.0 (prévia Android)
 
 Requisito: Android 9 (API 28) ou superior. APK universal, sem runtime adicional.
 
-1. Extraia o ZIP e abra `dysland-0.1.0-debug.apk` no telefone.
+1. Extraia o ZIP e abra `dysland-0.2.0-debug.apk` no telefone.
 2. Autorize temporariamente a instalação dessa fonte, se solicitado pelo Android.
 3. Abra Dysland e conceda **Exibir sobre outros apps**. Ative a ilha.
 4. Para mídia/chamadas/atividades, autorize **Acesso às notificações**. Esse acesso é sensível: o Android permite ler notificações. O Dysland processa apenas atividades compatíveis em memória, sem histórico, rede ou telemetria.
 5. No Android 13+, permita os avisos para receber o alerta sonoro do temporizador. Em APKs instalados fora de uma loja, o Android pode bloquear o acesso às notificações: use Informações do app › menu › Permitir configurações restritas **apenas se confiar no APK**.
 6. Bluetooth é opcional (Android 12+); permite identificar conexões de aparelhos, não procura dispositivos. Conexões de áudio usam também a API pública de áudio.
-7. Escolha um preset, ajuste largura/altura/topo/deslocamento. Valores em dp; os presets são aproximações, não medições certificadas. Ajuste manualmente para não cobrir a câmera ou relógio.
-8. Toque para expandir; toque longo abre as configurações. A ilha recolhe após dez segundos. Desative no app ou na notificação persistente.
+7. Em Ajustes, ative a detecção de câmera (Android 11+) ou calibre diâmetro, largura/altura/topo/deslocamento. Android 9/10 usam alinhamento manual. Valores em dp; os presets são aproximações, não medições certificadas. Ajuste manualmente para não cobrir a câmera ou relógio.
+8. Em repouso a ilha recolhe em um círculo preto na câmera. Durante a música a capa gira e três barras indicam reprodução; pause para interromper o movimento. Após cerca de oito segundos em pausa, recolhe novamente. Toque para expandir; toque longo abre as configurações. A ilha recolhe após dez segundos. Desative no app ou na notificação persistente.
 
 ## Limites desta prévia
 - APK **debug** assinado automaticamente pelo Android SDK; não é um release de loja. Builds CI diferentes podem usar chaves debug diferentes: para atualizar pode ser necessário desinstalar (perdendo ajustes). Não acompanha chave privada.
@@ -23,3 +23,7 @@ Requisito: Android 9 (API 28) ou superior. APK universal, sem runtime adicional.
 - Para revogar: desative a ilha e remova sobreposição/acesso às notificações nas configurações do Android, ou desinstale.
 
 Sem anúncios, acesso à internet, contas ou coleta de dados. Fonte Manrope (SIL OFL); ícones vetoriais originais incluídos. Código sob a licença LICENSE do repositório.
+
+## Movimento e nova interface
+
+Três áreas: Ilha, Atividades e Ajustes. A demonstração da tela inicial é identificada como prévia e não controla o player. Reduzir movimento (no app ou no sistema) remove os loops e a transição elástica. Não é necessário dar acesso ao microfone para as barras: elas são um indicador decorativo de reprodução, não um medidor de áudio.

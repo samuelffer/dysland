@@ -15,6 +15,8 @@ import com.dysland.app.MainActivity;
 import com.dysland.app.R;
 import com.dysland.app.data.*;
 import com.dysland.app.integration.MediaBridge;
+import com.dysland.app.motion.PlaybackMotion;
+import android.animation.ValueAnimator;
 
 /** User-started foreground overlay. No boot receiver, hidden restart, wake lock or internet. */
 public final class IslandService extends Service {
@@ -35,6 +37,12 @@ public final class IslandService extends Service {
     private MediaController currentMedia;
     private AudioManager audio;
     private String renderedKey="";
+    private IslandMotion motion;
+    private PlaybackMotion playbackMotion;
+    private boolean lastExpanded;
+    private long lastPlayingAt;
+    private int cutoutHash=Integer.MIN_VALUE;
+    private float desiredAlpha=-1f;
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener preferenceListener=(p,k) -> render();
     private final Runnable collapseTask=() -> { expanded=false; render(); };
     private final Runnable tick=new Runnable() {
@@ -113,6 +121,14 @@ public final class IslandService extends Service {
         layout.setTitle("Dysland · atividade");
         try { windows.addView(island,layout); attached=true; }
         catch (RuntimeException denied) { stopSelf(); return; }
+        motion=new IslandMotion(island,windows,layout);
+        playbackMotion=new PlaybackMotion(island);
+        island.setOnApplyWindowInsetsListener((v,insets) -> {
+            int hash=insets.getDisplayCutout()==null ? 0 : insets.getDisplayCutout().hashCode();
+            if (hash!=cutoutHash) { cutoutHash=hash; handler.post(this::render); }
+            return insets;
+        });
+        island.requestApplyInsets();
         island.setOnClickListener(v -> { expanded=!expanded; render(); scheduleCollapse(); });
         island.setOnLongClickListener(v -> { startActivity(new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return true; });
         island.findViewById(R.id.collapse).setOnClickListener(v -> { expanded=false; render(); });
@@ -161,7 +177,9 @@ public final class IslandService extends Service {
         if (timeStart>=0 && (best==null || best.priority<80)) best=new ActivityStore.Event("time",TimeState.format(TimeState.seconds(now,timeStart,duration)),duration>0 ? "Temporizador em andamento" : "Cronômetro em andamento",R.drawable.ic_timer,80);
         currentMedia=null;
         MediaController controller=media==null ? null : media.current();
-        if (prefs.enabled("media_enabled") && controller!=null && (best==null || best.priority<50)) {
+        if (MediaBridge.playing(controller)) lastPlayingAt=now;
+        boolean mediaRecent=MediaBridge.playing(controller) || (lastPlayingAt>0 && now-lastPlayingAt<8000);
+        if (prefs.enabled("media_enabled") && controller!=null && mediaRecent && (best==null || best.priority<50)) {
             MediaMetadata metadata=controller.getMetadata();
             if (metadata!=null) {
                 String title=metadata.getString(MediaMetadata.METADATA_KEY_TITLE);
@@ -174,20 +192,50 @@ public final class IslandService extends Service {
         }
         current=best;
         boolean locked=getSystemService(KeyguardManager.class).isKeyguardLocked();
-        boolean visible=screenOn && !(locked && prefs.enabled("hide_lock")) && (best!=null || prefs.enabled("show_idle"));
-        island.setVisibility(visible ? View.VISIBLE : View.GONE);
-        if (!visible) { expanded=false; return; }
-        String key=best==null ? "idle" : best.key;
-        if (!key.equals(renderedKey)) {
-            renderedKey=key;
-            island.setAlpha(.4f); island.animate().alpha(1f).setDuration(260).start();
+        boolean visible=screenOn && !(locked && prefs.enabled("hide_lock"));
+        island.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
+        if (!visible) {
+            expanded=false;
+            if (playbackMotion!=null) playbackMotion.setPlaying(false,false);
+            return;
         }
+        boolean idle=best==null && !expanded;
+        boolean animations=!prefs.enabled("reduce_motion") && ValueAnimator.areAnimatorsEnabled();
+        String key=best==null ? "idle" : best.key;
+        boolean stateChanged=!key.equals(renderedKey) || expanded!=lastExpanded;
+        if (stateChanged) {
+            renderedKey=key;
+            View row=island.findViewById(R.id.compact_row);
+            row.animate().cancel();
+            row.setAlpha(animations ? 0f : 1f);
+            row.animate().alpha(idle ? 0f : 1f).setStartDelay(animations ? 90 : 0).setDuration(animations ? 240 : 0).start();
+            View content=island.findViewById(R.id.expanded_content);
+            content.animate().cancel(); content.setAlpha(animations ? 0f : 1f);
+            content.setTranslationY(animations ? dp(8) : 0);
+            content.animate().alpha(1f).translationY(0).setStartDelay(animations ? 100 : 0).setDuration(animations ? 260 : 0).start();
+            lastExpanded=expanded;
+        }
+        float alpha=idle && !prefs.enabled("show_idle") ? 0f : 1f;
+        if (desiredAlpha!=alpha) {
+            desiredAlpha=alpha;
+            island.animate().alpha(alpha).setDuration(animations ? 350 : 0).start();
+        }
+        island.setImportantForAccessibility(idle ? View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS : View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+        if (idle && !prefs.enabled("show_idle")) layout.flags|=WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        else layout.flags&=~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
         boolean privateContent=best!=null && best.key.startsWith("notification:") && !prefs.enabled("show_content");
         ((TextView)island.findViewById(R.id.island_title)).setText(best==null ? "Dysland" : privateContent ? "Atividade em andamento" : best.title);
         ((TextView)island.findViewById(R.id.island_subtitle)).setText(best==null ? "Seu Android, no seu ritmo." : privateContent ? "Abra o app para ver os detalhes" : best.subtitle);
+        ((TextView)island.findViewById(R.id.expanded_title)).setText(best==null ? "Seu Android, presente." : privateContent ? "Atividade em andamento" : best.title);
         ImageView artwork=island.findViewById(R.id.artwork);
         if (best!=null && best.art!=null) artwork.setImageBitmap(best.art); else artwork.setImageResource(best==null ? R.drawable.ic_island : best.icon);
         ((ImageView)island.findViewById(R.id.status_icon)).setImageResource(currentMedia!=null ? MediaBridge.playing(currentMedia) ? R.drawable.ic_pause : R.drawable.ic_play : R.drawable.ic_island);
+        boolean isMedia=currentMedia!=null;
+        island.findViewById(R.id.equalizer).setVisibility(isMedia ? View.VISIBLE : View.GONE);
+        island.findViewById(R.id.island_title).setVisibility(isMedia || idle ? View.GONE : View.VISIBLE);
+        island.findViewById(R.id.status_icon).setVisibility(View.GONE);
+        if (playbackMotion!=null) playbackMotion.setPlaying(isMedia && MediaBridge.playing(currentMedia),animations);
+        island.findViewById(R.id.compact_row).setVisibility(idle ? View.INVISIBLE : View.VISIBLE);
         island.findViewById(R.id.expanded_content).setVisibility(expanded ? View.VISIBLE : View.GONE);
         LinearLayout.LayoutParams row=(LinearLayout.LayoutParams)island.findViewById(R.id.compact_row).getLayoutParams();
         row.height=dp(prefs.height()-16); island.findViewById(R.id.compact_row).setLayoutParams(row);
@@ -212,13 +260,24 @@ public final class IslandService extends Service {
             }
         }
         int screenWidth=getResources().getDisplayMetrics().widthPixels;
-        int width=Math.min(dp(expanded ? Math.max(320,prefs.width()) : prefs.width()),Math.max(dp(140),screenWidth-dp(24)));
-        int maxOffset=Math.max(0,(screenWidth-width)/2-dp(8));
-        layout.width=width;
-        layout.height=expanded ? WindowManager.LayoutParams.WRAP_CONTENT : dp(prefs.height());
-        layout.x=Math.max(-maxOffset,Math.min(maxOffset,dp(prefs.offset())));
-        layout.y=dp(prefs.top());
-        try { windows.updateViewLayout(island,layout); } catch (IllegalArgumentException removed) { stopSelf(); }
+        if (Build.VERSION.SDK_INT>=30) screenWidth=windows.getMaximumWindowMetrics().getBounds().width();
+        float density=getResources().getDisplayMetrics().density;
+        CameraAnchor camera=CameraAnchor.resolve(Build.VERSION.SDK_INT>=30 ? windows.getMaximumWindowMetrics().getWindowInsets() : null,screenWidth,density,prefs);
+        int compactHeight=Math.max(dp(prefs.height()),Math.round(camera.diameter)+dp(8));
+        int width=idle ? Math.round(camera.diameter) : Math.min(dp(expanded ? Math.max(330,prefs.width()) : prefs.width()),screenWidth-dp(20));
+        int padding=idle ? 0 : dp(expanded ? 16 : 8);
+        island.setPadding(padding,expanded ? Math.round(camera.diameter)+dp(8) : padding,padding,padding);
+        int height;
+        if (idle) height=Math.round(camera.diameter);
+        else if (expanded) {
+            island.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
+            height=island.getMeasuredHeight();
+        } else height=compactHeight;
+        int left=Math.round(camera.x-width/2f);
+        left=Math.max(0,Math.min(screenWidth-width,left));
+        int offset=left+width/2-screenWidth/2;
+        int top=Math.max(0,Math.round(camera.y-(idle ? height/2f : expanded ? camera.diameter/2f : compactHeight/2f)));
+        if (motion!=null) motion.to(width,height,offset,top,animations);
     }
     private void send(PendingIntent intent) {
         try {
@@ -236,6 +295,8 @@ public final class IslandService extends Service {
         destroyed=true; running=false; handler.removeCallbacksAndMessages(null);
         ActivityStore.INSTANCE.observer=null;
         if (prefs!=null) prefs.values.unregisterOnSharedPreferenceChangeListener(preferenceListener);
+        if (motion!=null) motion.close();
+        if (playbackMotion!=null) playbackMotion.close();
         if (media!=null) media.close();
         if (receiverRegistered) unregisterReceiver(signals);
         if (audio!=null) audio.unregisterAudioDeviceCallback(audioCallback);

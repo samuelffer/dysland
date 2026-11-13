@@ -39,7 +39,7 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          disable-animations: true
+          disable-animations: false
           script: bash scripts/device-tests.sh
       - name: Instrumentation diagnostics on failure
         if: failure()
@@ -63,8 +63,8 @@ jobs:
           python3 scripts/package.py
       - uses: actions/upload-artifact@v5
         with:
-          name: dysland-0.1.0-android-debug
-          path: Zips/dysland-0.1.0-android-debug.zip
+          name: dysland-0.2.0-android-debug
+          path: Zips/dysland-0.2.0-android-debug.zip
           if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-artifact@v5
@@ -94,19 +94,19 @@ jobs:
           ref: ${{ github.sha }}
       - uses: actions/download-artifact@v5
         with:
-          name: dysland-0.1.0-android-debug
+          name: dysland-0.2.0-android-debug
           path: Zips
       - name: Publish only the new ZIP, never overwrite or rebase
         run: |
           remote_sha=$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | cut -f1)
           test "$remote_sha" = "$GITHUB_SHA" || { echo "Branch advanced; refusing to publish stale binary"; exit 1; }
-          if git ls-files --error-unmatch Zips/dysland-0.1.0-android-debug.zip >/dev/null 2>&1; then
+          if git ls-files --error-unmatch Zips/dysland-0.2.0-android-debug.zip >/dev/null 2>&1; then
             echo "Package already published; no overwrite."
             exit 0
           fi
-          python3 -c 'import zipfile; z=zipfile.ZipFile("Zips/dysland-0.1.0-android-debug.zip"); assert z.testzip() is None; assert "dysland-0.1.0-debug.apk" in z.namelist()'
+          python3 -c 'import zipfile; z=zipfile.ZipFile("Zips/dysland-0.2.0-android-debug.zip"); assert z.testzip() is None; assert "dysland-0.2.0-debug.apk" in z.namelist()'
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- Zips/dysland-0.1.0-android-debug.zip
-          git commit -m "build: publish validated Dysland 0.1.0 Android debug ZIP"
+          git add -- Zips/dysland-0.2.0-android-debug.zip
+          git commit -m "build: publish validated Dysland 0.2.0 Android debug ZIP"
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"

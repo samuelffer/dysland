@@ -1,12 +1,20 @@
 # Dysland
 
-Uma ilha de atividades para Android, inspirada na ergonomia da One UI, com identidade própria: carvão, verde-lima, tipografia Manrope, grandes títulos e cartões arredondados. **Prévia nativa 0.1.0, não um clone com APIs privadas.**
+Uma ilha de atividades para Android, inspirada na ergonomia da One UI, com identidade própria: superfícies claras, lavanda, tipografia Manrope, grandes títulos e cartões arredondados. **Prévia nativa 0.2.0, não um clone com APIs privadas.**
 
 ## Download e validação
 
-[**Baixar Dysland 0.1.0 · APK debug em ZIP · Android 9+**](https://github.com/samuelffer/dysland/raw/refs/heads/arena/7e2b3c57-dysland/Zips/dysland-0.1.0-android-debug.zip)
+[**Baixar Dysland 0.2.0 · APK debug em ZIP · Android 9+**](https://github.com/samuelffer/dysland/raw/refs/heads/arena/7e2b3c57-dysland/Zips/dysland-0.2.0-android-debug.zip)
 
-Build, lint, seis testes JVM e três testes de ciclo de vida em emulador Android 15 aprovados. Não testado em Samsung físico nem com chamadas/Bluetooth reais. [Evidências, checksums e artifacts](docs/VALIDATION.md).
+A versão 0.2 está em validação de build/lint, mola, geometria da câmera e animações. [Design e referências pesquisadas](docs/DESIGN-0.2.md). [Evidências da entrega anterior 0.1](docs/VALIDATION.md). Não testado em Samsung físico nem com chamadas/Bluetooth reais.
+
+## Novo na 0.2
+
+- Repouso fundido ao círculo da câmera; detecção de cutout em coordenadas da tela no Android 11+ e alinhamento manual em versões anteriores.
+- Transições de janela por molas analíticas, contínuas mesmo ao interromper uma expansão.
+- Disco/capa circular em rotação e três barras animadas em reprodução, suspensos em pausa, tela apagada e movimento reduzido.
+- Interface clara inteiramente refeita, navegação Ilha / Atividades / Ajustes e prévia interativa explicitamente identificada.
+- ZIP anterior preservado em `Zips/`.
 
 ## Produto
 

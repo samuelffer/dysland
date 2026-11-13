@@ -12,6 +12,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
+import android.animation.ValueAnimator;
+import com.dysland.app.motion.PreviewController;
 import android.widget.*;
 import com.dysland.app.data.Preferences;
 import com.dysland.app.integration.IslandNotificationListener;
@@ -20,6 +22,11 @@ import com.dysland.app.island.IslandService;
 public final class MainActivity extends Activity {
     private Preferences prefs;
     private boolean binding;
+    private PreviewController preview;
+    private int pageIndex;
+    private boolean resumed;
+    private final int[] pageIds={R.id.page_home,R.id.page_activities,R.id.page_settings};
+    private final int[] navIds={R.id.nav_home,R.id.nav_activities,R.id.nav_settings};
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         prefs=new Preferences(this);
@@ -61,7 +68,19 @@ public final class MainActivity extends Activity {
             }
             else startIsland(IslandService.START,0);
         });
+        preview=new PreviewController(findViewById(R.id.preview_island));
+        findViewById(R.id.demo_idle).setOnClickListener(v -> preview.show(0));
+        findViewById(R.id.demo_music).setOnClickListener(v -> preview.show(1));
+        findViewById(R.id.demo_timer).setOnClickListener(v -> preview.show(2));
+        for (int i=0;i<navIds.length;i++) { final int index=i; findViewById(navIds[i]).setOnClickListener(v -> showPage(index)); }
+        showPage(state==null ? 0 : state.getInt("page",0));
+        findViewById(R.id.expand_permissions).setOnClickListener(v -> {
+            View group=findViewById(R.id.permissions_group);
+            android.transition.TransitionManager.beginDelayedTransition((android.view.ViewGroup)group.getParent(),new android.transition.AutoTransition().setDuration(prefs.enabled("reduce_motion") ? 0 : 260));
+            group.setVisibility(group.getVisibility()==View.VISIBLE ? View.GONE : View.VISIBLE);
+        });
         setupGeometry();
+        bindSwitch(R.id.camera_auto,"camera_auto"); bindSwitch(R.id.reduce_motion,"reduce_motion");
         bindSwitch(R.id.hide_lock,"hide_lock"); bindSwitch(R.id.show_idle,"show_idle");
         bindSwitch(R.id.show_content,"show_content"); bindSwitch(R.id.media_enabled,"media_enabled");
         bindSwitch(R.id.events_enabled,"events_enabled"); bindSwitch(R.id.notifications_enabled,"notifications_enabled");
@@ -90,7 +109,10 @@ public final class MainActivity extends Activity {
     }
     private void bindSwitch(int id,String key) {
         Switch toggle=findViewById(id); toggle.setChecked(prefs.enabled(key));
-        toggle.setOnCheckedChangeListener((v,checked) -> prefs.set(key,checked));
+        toggle.setOnCheckedChangeListener((v,checked) -> {
+            prefs.set(key,checked);
+            if (preview!=null) preview.configure(resumed && pageIndex==0,prefs.enabled("reduce_motion"));
+        });
     }
     private void setupGeometry() {
         Spinner spinner=findViewById(R.id.preset);
@@ -104,14 +126,14 @@ public final class MainActivity extends Activity {
                 prefs.set("width", position==3 ? 210 : 190);
                 prefs.set("height", position==3 ? 48 : 44);
                 prefs.set("top",position==1 ? 6 : 8);
-                prefs.set("offset",position==5 ? -90 : 0);
+                prefs.set("offset",position==5 ? -150 : 0);
                 syncGeometry();
             }
         });
         setupSeek(R.id.width,"width",140); setupSeek(R.id.top,"top",0);
-        setupSeek(R.id.offset,"offset",-100); setupSeek(R.id.height,"height",40);
+        setupSeek(R.id.offset,"offset",-220); setupSeek(R.id.camera_diameter,"camera_diameter",10); setupSeek(R.id.height,"height",40);
         findViewById(R.id.reset_geometry).setOnClickListener(v -> {
-            prefs.set("width",190); prefs.set("height",44); prefs.set("top",8); prefs.set("offset",0); syncGeometry(); spinner.setSelection(0);
+            prefs.set("camera_diameter",16); prefs.set("width",190); prefs.set("height",44); prefs.set("top",8); prefs.set("offset",0); syncGeometry(); spinner.setSelection(0);
         });
         syncGeometry();
     }
@@ -125,22 +147,46 @@ public final class MainActivity extends Activity {
         });
     }
     private void syncGeometry() {
+        ((SeekBar)findViewById(R.id.camera_diameter)).setProgress(prefs.number("camera_diameter",16)-10);
         ((SeekBar)findViewById(R.id.width)).setProgress(prefs.width()-140);
         ((SeekBar)findViewById(R.id.height)).setProgress(prefs.height()-40);
         ((SeekBar)findViewById(R.id.top)).setProgress(prefs.top());
-        ((SeekBar)findViewById(R.id.offset)).setProgress(prefs.offset()+100); geometryLabel();
+        ((SeekBar)findViewById(R.id.offset)).setProgress(prefs.offset()+220); geometryLabel();
     }
     private void geometryLabel() { ((TextView)findViewById(R.id.geometry_label)).setText(prefs.width()+" × "+prefs.height()+" dp · topo "+prefs.top()+" · deslocamento "+prefs.offset()); }
     @Override protected void onResume() {
         super.onResume();
+        resumed=true;
+        if (preview!=null) preview.configure(pageIndex==0,prefs.enabled("reduce_motion"));
         updateStatus();
         // Refresh integrations only on returning from settings, never while rendering status.
         if (IslandService.running) startService(new Intent(this,IslandService.class).setAction(IslandService.REFRESH));
     }
+    @Override protected void onPause() {
+        resumed=false;
+        if (preview!=null) preview.configure(false,prefs.enabled("reduce_motion"));
+        super.onPause();
+    }
+    @Override protected void onDestroy() { if (preview!=null) preview.close(); super.onDestroy(); }
+    @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putInt("page",pageIndex); }
+    private void showPage(int index) {
+        pageIndex=Math.max(0,Math.min(2,index));
+        for (int i=0;i<pageIds.length;i++) {
+            View page=findViewById(pageIds[i]); page.animate().cancel();
+            page.setVisibility(i==pageIndex ? View.VISIBLE : View.GONE);
+            findViewById(navIds[i]).setBackgroundTintList(android.content.res.ColorStateList.valueOf(i==pageIndex ? 0xFFE9E5FC : 0xFFFFFFFF));
+        }
+        View selected=findViewById(pageIds[pageIndex]);
+        boolean motion=!prefs.enabled("reduce_motion") && ValueAnimator.areAnimatorsEnabled();
+        selected.setAlpha(motion ? 0f : 1f); selected.setTranslationY(motion ? 20f : 0);
+        selected.animate().alpha(1f).translationY(0).setDuration(motion ? 300 : 0).start();
+        ((ScrollView)findViewById(R.id.page_scroll)).scrollTo(0,0);
+        if (preview!=null) preview.configure(resumed && pageIndex==0,prefs.enabled("reduce_motion"));
+    }
     private void updateStatus() {
         boolean access=getSystemService(NotificationManager.class).isNotificationListenerAccessGranted(new ComponentName(this,IslandNotificationListener.class));
-        ((Button)findViewById(R.id.enable)).setText(IslandService.running ? "Desativar minha ilha" : "Ativar minha ilha");
-        ((TextView)findViewById(R.id.service_status)).setText(IslandService.running ? "Ativa · toque na ilha para expandir" : "Desativada · pronta quando você quiser");
+        ((Button)findViewById(R.id.enable)).setText(IslandService.running ? "Desativar Dysland" : "Ativar Dysland");
+        ((TextView)findViewById(R.id.service_status)).setText(IslandService.running ? "Ativa · recolhe à câmera em repouso" : "Desativada · ative quando quiser");
         ((TextView)findViewById(R.id.permissions_status)).setText("Sobreposição: "+(Settings.canDrawOverlays(this)?"permitida":"pendente")+"\nMídia e notificações: "+(access?"permitidas":"pendentes")+"\nAvisos do Dysland: "+(getSystemService(NotificationManager.class).areNotificationsEnabled()?"permitidos":"bloqueados"));
     }
 }
