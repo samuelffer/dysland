@@ -9,4 +9,9 @@ if [ "$code" -ne 0 ]; then
   exit "$code"
 fi
 mkdir -p screenshots
-adb pull /sdcard/Android/data/com.dysland.app/files/dysland-home.png screenshots/dysland-home.png
+adb pull /sdcard/Android/data/com.dysland.app/files/dysland-home.png screenshots/dysland-home.png 2>&1 | tee /tmp/screenshot.log
+code=${PIPESTATUS[0]}
+if [ "$code" -ne 0 ]; then
+  python3 -c 'from pathlib import Path; s=Path("/tmp/screenshot.log").read_text(); print("::error::Screenshot extraction: "+s.replace("%","%25").replace("\n","%0A"))'
+fi
+exit "$code"

@@ -41,6 +41,19 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: bash scripts/device-tests.sh
+      - name: Instrumentation diagnostics on failure
+        if: failure()
+        run: |
+          python3 - <<'PYDIAG'
+          from pathlib import Path
+          paths = [Path('/tmp/device-tests.log')]
+          paths += list(Path('app/build/outputs/androidTest-results').rglob('*.xml'))
+          for p in paths:
+              if p.is_file():
+                  s = p.read_text(errors='replace')[-20000:]
+                  print('::error::' + str(p) + '%0A' + s.replace('%','%25').replace('\n','%0A').replace('\r','%0D'))
+          PYDIAG
+          adb devices || true
       - name: Verify debug APK signature
         run: |
           SDK_BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
