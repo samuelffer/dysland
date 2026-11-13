@@ -1,12 +1,12 @@
 # Dysland
 
-Uma ilha de atividades para Android, inspirada na ergonomia da One UI, com identidade própria: superfícies escuras, acentos personalizáveis, tipografia Manrope, grandes títulos e cartões arredondados. **Prévia nativa 0.3.0, não um clone com APIs privadas.**
+Uma ilha de atividades para Android, inspirada na ergonomia da One UI, com identidade própria: superfícies escuras, acentos personalizáveis, tipografia Manrope, grandes títulos e cartões arredondados. **Prévia nativa 0.3.1, não um clone com APIs privadas.**
 
 ## Download e validação
 
-[**Baixar Dysland 0.3.0 · APK debug em ZIP · Android 9+**](https://github.com/samuelffer/dysland/raw/refs/heads/arena/7e2b3c57-dysland/Zips/dysland-0.3.0-android-debug.zip)
+[**Baixar Dysland 0.3.1 · APK debug em ZIP · Android 9+**](https://github.com/samuelffer/dysland/raw/refs/heads/arena/7e2b3c57-dysland/Zips/dysland-0.3.1-android-debug.zip)
 
-A versão 0.3.0 está em validação. Evidências serão registradas após o build. [Design e referências pesquisadas](docs/DESIGN-0.2.md). Não testado em Samsung físico nem com chamadas/Bluetooth reais.
+A versão 0.3.1 passou por build debug/release, lint, **24 testes JVM e 9 testes Android 15**, incluindo correção de um pixel e comandos anterior/seek em MediaSession. [Evidências, checksums e artifacts](docs/VALIDATION-0.3.1.md). [Pesquisa e decisões](docs/DESIGN-0.3.md). Não testado em Samsung físico nem com chamadas/Bluetooth reais.
 
 ## Novo na 0.3
 
@@ -17,13 +17,13 @@ Modo escuro, quatro acentos, ícone fornecido pelo usuário, espessura relativa 
 - Repouso fundido ao círculo da câmera; detecção de cutout em coordenadas da tela no Android 11+ e alinhamento manual em versões anteriores.
 - Transições de janela por molas analíticas, contínuas mesmo ao interromper uma expansão.
 - Disco/capa circular em rotação e três barras animadas em reprodução, suspensos em pausa, tela apagada e movimento reduzido.
-- Interface clara inteiramente refeita, navegação Ilha / Atividades / Ajustes e prévia interativa explicitamente identificada.
-- ZIPs anteriores preservados em `Zips/`. A 0.3.0 substitui a 0.2.0, corrigindo pesos de fonte, encaixe na barra de status e validação de captura.
+- Navegação Ilha / Atividades / Ajustes e prévia interativa explicitamente identificada; tema escuro retomado na 0.3.
+- ZIPs anteriores preservados em `Zips/`. A 0.3.1 é a entrega atual; a 0.2.1 corrigiu pesos de fonte e encaixe na barra de status, enquanto a 0.3.1 traz o padrão fino e a ativação fixa.
 
 ## Produto
 
-- Sobreposição real `TYPE_APPLICATION_OVERLAY`, compacta/expandida, com presets aproximados e calibração em dp.
-- MediaSession: capa, título, artista, play/pausa e próxima faixa; respeita capacidades publicadas pelo player.
+- Sobreposição real `TYPE_APPLICATION_OVERLAY`, compacta/expandida, com presets aproximados e calibração em dp e pixels físicos.
+- MediaSession: capa, título, artista, play/pausa, anterior/próxima e timeline com seek; respeita capacidades publicadas pelo player.
 - Integração local com notificações: chamadas (prioridade máxima), navegação e atividades contínuas, com ações originais via PendingIntent. Não solicita acesso a mensagens, contatos ou telefonia.
 - Temporizador e cronômetro próprios com relógio monotônico; aviso de conclusão, recarga/bateria baixa e conexões de áudio/Bluetooth.
 - Controles individuais de conteúdo, integrações e privacidade no bloqueio. Sem rede ou analytics.
@@ -37,10 +37,11 @@ app/src/main/java/com/dysland/app/
   MainActivity.java              # configuração e consentimento
   data/                         # preferências, eventos efêmeros, cálculo de tempo
   integration/                  # NotificationListener e MediaSession
+  presentation/                 # renderer compartilhado, paletas e timeline
   island/IslandService.java     # ciclo de vida da sobreposição e sinais do sistema
 app/src/main/res/layout/         # toda a UI declarada em XML
 app/src/main/res/drawable/       # ícones vetoriais originais e superfícies
-app/src/test/                   # testes JVM da aritmética de tempo
+app/src/test/                   # tempo, mola, mídia, navegação e geometria
 scripts/package.py              # ZIP imutável, validação e SHA-256
 Zips/                           # versões entregues (nunca sobrescrever)
 ```

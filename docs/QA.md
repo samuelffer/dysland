@@ -1,6 +1,6 @@
 # Roteiro de aceitação em Android
 
-O ciclo básico de abertura/permissão/ativação/desativação foi executado em emulador Android 15; veja [VALIDATION-0.2.1.md](VALIDATION-0.2.1.md) para os sete cenários automatizados atuais. Os cenários abaixo continuam pendentes de validação manual e em hardware físico.
+O ciclo básico de abertura/permissão/ativação/desativação foi executado em emulador Android 15; veja [VALIDATION-0.3.1.md](VALIDATION-0.3.1.md) para os nove cenários automatizados atuais. Os cenários abaixo continuam pendentes de validação manual e em hardware físico.
 
 - Instalação limpa, negar cada permissão: app abre, não inicia ilha sem sobreposição, controles próprios funcionam sem acesso às notificações.
 - Conceder permissões, ativar/desativar pelo app e pela notificação; revogar sobreposição com serviço ativo; verificar ausência de crash/janela órfã.
@@ -14,3 +14,12 @@ O ciclo básico de abertura/permissão/ativação/desativação foi executado em
 - Confirmar que apps seguros ocultam a sobreposição e que a ilha não recebe toques fora de seus limites. App não tenta contornar proteções.
 - Desativar exibição de conteúdo, integrar chamada e confirmar que nenhum título/detalhe/ação textual sensível aparece.
 - Auditoria: nenhuma permissão de rede/câmera/microfone/localização; nenhum histórico salvo; desinstalação remove configurações.
+
+## Complementos da 0.3
+
+- Calibrar diâmetro manual/pelo sistema, espessura extra zero e valores intermediários; mover X/Y em um pixel no Samsung físico; testar escala de tela/fonte e rotação.
+- Timeline em Spotify, Samsung Music e YouTube Music: arrastar/soltar, duração ausente/live, anterior desabilitado quando não suportado e janela de chamada durante o arraste.
+- Google Maps/Waze: distância, manobra, remoção da notificação e textos em português/inglês; não inventar manobras quando não publicadas.
+- Carga com música simultânea: chegada temporária, indicador menor, prioridade correta e remoção ao desconectar. Não exibir alegação de carga rápida.
+- Quatro acentos: persistência após recriar/fechar o app, diálogos escuros e cor da ilha real.
+- Ícone em launchers com máscara circular/quadrada; conferir que o Android preserva a imagem dentro da área segura.
