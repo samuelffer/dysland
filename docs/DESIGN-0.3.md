@@ -12,7 +12,7 @@ Consultados em 13/11/2026, através do GitHub:
 ## Decisões
 
 - Altura compacta = diâmetro da câmera + espessura extra (0–28 dp), mínimo técnico 12 dp. Não força mais 40–80 dp nem adiciona 8 dp incondicionais. Ícone, fonte compacta e barras se ajustam ao espaço. Texto/controles maiores continuam no expandido. Uma ilha muito fina tem área de toque pequena: use Ajustes para aumentar a folga se necessário.
-- Posição: ajuste amplo em dp e fino em pixels físicos (±40 px, botões de 1 px). Correção de diâmetro de ±12 px. É possível desligar só o diâmetro automático mantendo o centro detectado.
+- Posição: ajuste amplo em dp e fino em pixels físicos (±40 px, botões de 1 px). Correção de diâmetro de ±12 px. O padrão é diâmetro manual de 16 dp com posição automática: caixas de cutout podem ser muito maiores que a lente. O diâmetro automático continua opcional.
 - Player expandido: anterior, play/pausa, próxima, timeline e duração. Comandos só são habilitados quando a MediaSession declara suporte. Seek enviado uma vez ao soltar o slider. Duração ausente/live desabilita seek; posição interpolada pelo relógio monotônico é limitada à duração.
 - Carga: aviso de chegada com raio e entrada animada, quatro segundos de prioridade, depois indicador menor de porcentagem (112 dp). Mídia/navegação têm prioridade sobre a carga discreta. Ao desconectar, ambos são removidos. Não deduzimos “carga rápida” de corrente instantânea ou de campos privados do fabricante.
 - Navegação: distância e direção extraídas somente de textos recebidos. Suporta português/inglês para ícones de esquerda/direita, fallback genérico. Sem texto compatível, não inventa ETA, manobra, mapa ou localização. Módulo tem opção própria, independente das outras atividades. Ainda exige acesso às notificações.

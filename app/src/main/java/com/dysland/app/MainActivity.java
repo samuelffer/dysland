@@ -211,6 +211,7 @@ public final class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putInt("page",pageIndex); }
     private void showPage(int index) {
         pageIndex=Math.max(0,Math.min(2,index));
+        findViewById(R.id.home_activation).setVisibility(pageIndex==0 ? View.VISIBLE : View.GONE);
         for (int i=0;i<pageIds.length;i++) {
             View page=findViewById(pageIds[i]); page.animate().cancel();
             page.setVisibility(i==pageIndex ? View.VISIBLE : View.GONE);

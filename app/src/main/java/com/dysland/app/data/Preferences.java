@@ -8,7 +8,7 @@ public final class Preferences {
     public final SharedPreferences values;
     public Preferences(Context context) { values = context.getSharedPreferences("island", Context.MODE_PRIVATE); }
     public int number(String key, int fallback) { return values.getInt(key, fallback); }
-    public boolean enabled(String key) { return values.getBoolean(key, !"reduce_motion".equals(key)); }
+    public boolean enabled(String key) { return values.getBoolean(key, !("reduce_motion".equals(key) || "camera_size_auto".equals(key))); }
     public void set(String key, int value) { values.edit().putInt(key, value).apply(); }
     public void set(String key, boolean value) { values.edit().putBoolean(key, value).apply(); }
     public int width() { return Math.max(140, Math.min(320, number("width", 190))); }

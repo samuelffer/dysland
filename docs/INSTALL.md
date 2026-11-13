@@ -1,8 +1,8 @@
-# Instalar o Dysland 0.3.0 (prévia Android)
+# Instalar o Dysland 0.3.1 (prévia Android)
 
 Requisito: Android 9 (API 28) ou superior. APK universal, sem runtime adicional.
 
-1. Extraia o ZIP e abra `dysland-0.3.0-debug.apk` no telefone.
+1. Extraia o ZIP e abra `dysland-0.3.1-debug.apk` no telefone.
 2. Autorize temporariamente a instalação dessa fonte, se solicitado pelo Android.
 3. Abra Dysland e conceda **Exibir sobre outros apps**. Ative a ilha.
 4. Para mídia/chamadas/atividades, autorize **Acesso às notificações**. Esse acesso é sensível: o Android permite ler notificações. O Dysland processa apenas atividades compatíveis em memória, sem histórico, rede ou telemetria.
@@ -33,7 +33,7 @@ O pacote gerado no CI inclui `PREVIA.png`, uma captura real da tela inicial no e
 ## Novo na 0.3
 
 - Todo o app volta ao modo escuro. Em Ajustes escolha um dos quatro acentos; a ilha permanece preta para se fundir à câmera.
-- Ajuste a espessura extra (0–28 dp), não uma altura mínima imposta. Zero aproxima a altura à câmera. Há ajuste fino X/Y em pixels (inclusive botões de 1 px) e correção fina do diâmetro. Desative “Usar diâmetro detectado” se o firmware informar um recorte grande demais.
+- Ajuste a espessura extra (0–28 dp), não uma altura mínima imposta. Zero aproxima a altura à câmera. Há ajuste fino X/Y em pixels (inclusive botões de 1 px) e correção fina do diâmetro. Por padrão, o diâmetro é manual (16 dp), mantendo a posição automática. Ative “Usar diâmetro detectado” apenas se o recorte informado corresponder bem à sua câmera.
 - O player expandido inclui anterior, pausa/play, próxima, posição e duração. Arraste a timeline e solte para buscar. Botões/seek podem ficar desabilitados se o player não publicar suporte ou se a transmissão não tiver duração.
 - Ao carregar, o aviso inicial dura cerca de quatro segundos e recolhe para uma porcentagem discreta, com menor prioridade que música/GPS. O raio é visual de energia, não comprovação de carga rápida.
 - Navegação tem controle separado e mostra textos reais de notificações compatíveis, inclusive distância/manobra quando publicadas. Não solicita GPS e não calcula rotas próprias.
