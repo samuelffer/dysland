@@ -1,0 +1,247 @@
+package com.dysland.app.island;
+
+import android.app.*;
+import android.content.*;
+import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.PixelFormat;
+import android.hardware.display.DisplayManager;
+import android.media.*;
+import android.media.session.*;
+import android.os.*;
+import android.provider.Settings;
+import android.view.*;
+import android.widget.*;
+import com.dysland.app.MainActivity;
+import com.dysland.app.R;
+import com.dysland.app.data.*;
+import com.dysland.app.integration.MediaBridge;
+import java.util.ArrayList;
+import java.util.List;
+
+/** User-started foreground overlay. No boot receiver, hidden restart, wake lock or internet. */
+public final class IslandService extends Service {
+    public static final String START="com.dysland.START", REFRESH="com.dysland.REFRESH",
+            TIMER="com.dysland.TIMER", STOPWATCH="com.dysland.STOPWATCH", STOP_TIME="com.dysland.STOP_TIME", STOP="com.dysland.STOP";
+    public static volatile boolean running;
+    private final Handler handler=new Handler(Looper.getMainLooper());
+    private Preferences prefs;
+    private WindowManager windows;
+    private View island;
+    private WindowManager.LayoutParams layout;
+    private MediaBridge media;
+    private boolean expanded, attached, receiverRegistered, audioRegistered, destroyed;
+    private boolean lastCharging, batteryKnown, lowNotified;
+    private boolean screenOn=true;
+    private long timeStart=-1, duration, lastRefresh;
+    private ActivityStore.Event current;
+    private MediaController currentMedia;
+    private AudioManager audio;
+    private String renderedKey="";
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener preferenceListener=(p,k) -> render();
+    private final Runnable collapseTask=() -> { expanded=false; render(); };
+    private final Runnable tick=new Runnable() {
+        @Override public void run() {
+            if (destroyed) return;
+            long now=SystemClock.elapsedRealtime();
+            if (now-lastRefresh>10000) { lastRefresh=now; media.refresh(); }
+            if (duration>0 && timeStart>=0 && now-timeStart>=duration) {
+                timeStart=-1; duration=0;
+                ActivityStore.Event event=new ActivityStore.Event("timer_done","Tempo concluído","Seu temporizador chegou ao fim",R.drawable.ic_timer,90);
+                event.expires=now+15000; ActivityStore.INSTANCE.put(event);
+                Notification done=new Notification.Builder(IslandService.this,"timers")
+                    .setSmallIcon(R.drawable.ic_timer).setContentTitle("Tempo concluído")
+                    .setContentText("Seu temporizador Dysland chegou ao fim.").setContentIntent(openApp()).setAutoCancel(true).build();
+                getSystemService(NotificationManager.class).notify(2,done);
+            }
+            render();
+            handler.postDelayed(this,timeStart>=0 || expanded ? 1000 : 3000);
+        }
+    };
+    private final BroadcastReceiver signals=new BroadcastReceiver() {
+        @Override public void onReceive(Context context,Intent intent) {
+            String action=intent.getAction();
+            if (Intent.ACTION_SCREEN_OFF.equals(action)) { screenOn=false; expanded=false; render(); return; }
+            if (Intent.ACTION_SCREEN_ON.equals(action) || Intent.ACTION_USER_PRESENT.equals(action)) { screenOn=true; render(); return; }
+            if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
+                int level=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,0), scale=intent.getIntExtra(BatteryManager.EXTRA_SCALE,100);
+                int percent=scale>0 ? Math.round(level*100f/scale) : 0;
+                boolean charging=intent.getIntExtra(BatteryManager.EXTRA_PLUGGED,0)!=0;
+                if (charging && (!batteryKnown || !lastCharging)) flash("charge","Carregando · "+percent+"%","Energia conectada ao aparelho",R.drawable.ic_battery);
+                if (percent<=15 && !charging && !lowNotified) { flash("low","Bateria baixa · "+percent+"%","Hora de recarregar",R.drawable.ic_battery); lowNotified=true; }
+                if (percent>20 || charging) lowNotified=false;
+                batteryKnown=true; lastCharging=charging;
+            }
+            if (android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED.equals(action) &&
+                    (Build.VERSION.SDK_INT<31 || checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)==android.content.pm.PackageManager.PERMISSION_GRANTED)) {
+                android.bluetooth.BluetoothDevice device=intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE);
+                try { flash("bluetooth", device!=null && device.getName()!=null ? device.getName() : "Dispositivo Bluetooth", "Bluetooth conectado", R.drawable.ic_bluetooth); }
+                catch (SecurityException ignored) { /* Permission may have been revoked between the check and access. */ }
+            }
+        }
+    };
+    private final AudioDeviceCallback audioCallback=new AudioDeviceCallback() {
+        @Override public void onAudioDevicesAdded(AudioDeviceInfo[] devices) {
+            if (!audioRegistered) return; // Ignore the initial inventory callback.
+            for (AudioDeviceInfo device:devices) {
+                int t=device.getType();
+                if (device.isSink() && (t==AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || t==AudioDeviceInfo.TYPE_BLUETOOTH_SCO || t==AudioDeviceInfo.TYPE_WIRED_HEADPHONES || t==AudioDeviceInfo.TYPE_USB_HEADSET || t==AudioDeviceInfo.TYPE_BLE_HEADSET)) {
+                    flash("audio","Áudio conectado",device.getProductName().toString(),R.drawable.ic_bluetooth); break;
+                }
+            }
+        }
+    };
+    @Override public void onCreate() {
+        super.onCreate(); prefs=new Preferences(this);
+        NotificationManager nm=getSystemService(NotificationManager.class);
+        NotificationChannel persistent=new NotificationChannel("island","Ilha ativa",NotificationManager.IMPORTANCE_LOW);
+        persistent.setDescription("Mantém a sobreposição solicitada por você em funcionamento.");
+        nm.createNotificationChannel(persistent);
+        nm.createNotificationChannel(new NotificationChannel("timers","Temporizadores",NotificationManager.IMPORTANCE_HIGH));
+        Intent stop=new Intent(this,IslandService.class).setAction(STOP);
+        Notification notification=new Notification.Builder(this,"island").setSmallIcon(R.drawable.ic_island)
+            .setContentTitle("Dysland está ativa").setContentText("Toque para ajustar. Você pode desativar a qualquer momento.")
+            .setContentIntent(openApp()).setOngoing(true).setCategory(Notification.CATEGORY_SERVICE)
+            .addAction(new Notification.Action.Builder(null,"Desativar",PendingIntent.getService(this,2,stop,PendingIntent.FLAG_IMMUTABLE)).build()).build();
+        startForeground(1,notification);
+        if (!Settings.canDrawOverlays(this)) { stopSelf(); return; }
+        running=true; windows=getSystemService(WindowManager.class);
+        island=LayoutInflater.from(this).inflate(R.layout.overlay_island,null,false);
+        layout=new WindowManager.LayoutParams(dp(prefs.width()),dp(prefs.height()),WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,PixelFormat.TRANSLUCENT);
+        layout.gravity=Gravity.TOP|Gravity.CENTER_HORIZONTAL;
+        layout.layoutInDisplayCutoutMode=WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        layout.setTitle("Dysland · atividade");
+        try { windows.addView(island,layout); attached=true; }
+        catch (RuntimeException denied) { stopSelf(); return; }
+        island.setOnClickListener(v -> { expanded=!expanded; render(); scheduleCollapse(); });
+        island.setOnLongClickListener(v -> { startActivity(new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return true; });
+        island.findViewById(R.id.collapse).setOnClickListener(v -> { expanded=false; render(); });
+        island.findViewById(R.id.action_primary).setOnClickListener(v -> { media.toggle(); scheduleCollapse(); });
+        island.findViewById(R.id.action_secondary).setOnClickListener(v -> { media.next(); scheduleCollapse(); });
+        island.findViewById(R.id.notification_action).setOnClickListener(v -> {
+            if (current!=null && "time".equals(current.key)) { timeStart=-1; duration=0; render(); }
+            else if (current!=null && current.open!=null) send(current.open);
+        });
+        media=new MediaBridge(this,this::render);
+        ActivityStore.INSTANCE.observer=this::render;
+        prefs.values.registerOnSharedPreferenceChangeListener(preferenceListener);
+        IntentFilter filter=new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        filter.addAction(Intent.ACTION_SCREEN_ON); filter.addAction(Intent.ACTION_SCREEN_OFF); filter.addAction(Intent.ACTION_USER_PRESENT);
+        filter.addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED);
+        // All actions are protected system broadcasts; no app-defined commands are accepted here.
+        if (Build.VERSION.SDK_INT>=33) registerReceiver(signals,filter,Context.RECEIVER_EXPORTED); else registerReceiver(signals,filter);
+        receiverRegistered=true;
+        audio=getSystemService(AudioManager.class); audio.registerAudioDeviceCallback(audioCallback,handler);
+        handler.post(() -> audioRegistered=true);
+        screenOn=getSystemService(PowerManager.class).isInteractive();
+        handler.post(tick);
+    }
+    @Override public int onStartCommand(Intent intent,int flags,int id) {
+        if (intent==null || !running) { stopSelf(); return START_NOT_STICKY; }
+        String action=intent.getAction();
+        if (STOP.equals(action)) { prefs.set("wanted",false); stopSelf(); return START_NOT_STICKY; }
+        if (TIMER.equals(action) || STOPWATCH.equals(action)) {
+            timeStart=SystemClock.elapsedRealtime();
+            duration=TIMER.equals(action) ? Math.max(60000,Math.min(999*60000L,intent.getLongExtra("duration",60000))) : 0;
+        } else if (STOP_TIME.equals(action)) { timeStart=-1; duration=0; }
+        if (media!=null) media.refresh();
+        render(); return START_NOT_STICKY;
+    }
+    private void flash(String key,String title,String detail,int icon) {
+        ActivityStore.Event event=new ActivityStore.Event(key,title,detail,icon,85);
+        event.expires=SystemClock.elapsedRealtime()+6500; ActivityStore.INSTANCE.put(event);
+    }
+    private void scheduleCollapse() { handler.removeCallbacks(collapseTask); if (expanded) handler.postDelayed(collapseTask,10000); }
+    private int dp(int value) { return Math.round(value*getResources().getDisplayMetrics().density); }
+    private void render() {
+        if (!attached || destroyed) return;
+        if (!Settings.canDrawOverlays(this)) { stopSelf(); return; }
+        long now=SystemClock.elapsedRealtime();
+        ActivityStore.Event best=ActivityStore.INSTANCE.top(now,prefs.enabled("notifications_enabled"),prefs.enabled("events_enabled"));
+        if (timeStart>=0 && (best==null || best.priority<80)) best=new ActivityStore.Event("time",TimeState.format(TimeState.seconds(now,timeStart,duration)),duration>0 ? "Temporizador em andamento" : "Cronômetro em andamento",R.drawable.ic_timer,80);
+        currentMedia=null;
+        MediaController controller=media==null ? null : media.current();
+        if (prefs.enabled("media_enabled") && controller!=null && (best==null || best.priority<50)) {
+            MediaMetadata metadata=controller.getMetadata();
+            if (metadata!=null) {
+                String title=metadata.getString(MediaMetadata.METADATA_KEY_TITLE);
+                String artist=metadata.getString(MediaMetadata.METADATA_KEY_ARTIST);
+                best=new ActivityStore.Event("media",title==null ? "Sua música" : title,artist==null ? "Controle de mídia" : artist,R.drawable.ic_music,50);
+                best.art=metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
+                if (best.art==null) best.art=metadata.getBitmap(MediaMetadata.METADATA_KEY_ART);
+                currentMedia=controller; best.open=controller.getSessionActivity();
+            }
+        }
+        current=best;
+        boolean locked=getSystemService(KeyguardManager.class).isKeyguardLocked();
+        boolean visible=screenOn && !(locked && prefs.enabled("hide_lock")) && (best!=null || prefs.enabled("show_idle"));
+        island.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (!visible) { expanded=false; return; }
+        String key=best==null ? "idle" : best.key;
+        if (!key.equals(renderedKey)) {
+            renderedKey=key;
+            island.setAlpha(.4f); island.animate().alpha(1f).setDuration(260).start();
+        }
+        boolean privateContent=best!=null && best.key.startsWith("notification:") && !prefs.enabled("show_content");
+        ((TextView)island.findViewById(R.id.island_title)).setText(best==null ? "Dysland" : privateContent ? "Atividade em andamento" : best.title);
+        ((TextView)island.findViewById(R.id.island_subtitle)).setText(best==null ? "Seu Android, no seu ritmo." : privateContent ? "Abra o app para ver os detalhes" : best.subtitle);
+        ImageView artwork=island.findViewById(R.id.artwork);
+        if (best!=null && best.art!=null) artwork.setImageBitmap(best.art); else artwork.setImageResource(best==null ? R.drawable.ic_island : best.icon);
+        ((ImageView)island.findViewById(R.id.status_icon)).setImageResource(currentMedia!=null ? MediaBridge.playing(currentMedia) ? R.drawable.ic_pause : R.drawable.ic_play : R.drawable.ic_island);
+        island.findViewById(R.id.expanded_content).setVisibility(expanded ? View.VISIBLE : View.GONE);
+        LinearLayout.LayoutParams row=(LinearLayout.LayoutParams)island.findViewById(R.id.compact_row).getLayoutParams();
+        row.height=dp(prefs.height()-24); island.findViewById(R.id.compact_row).setLayoutParams(row);
+        ImageButton primary=island.findViewById(R.id.action_primary), secondary=island.findViewById(R.id.action_secondary);
+        primary.setVisibility(currentMedia==null ? View.GONE : View.VISIBLE); secondary.setVisibility(currentMedia==null ? View.GONE : View.VISIBLE);
+        boolean playing=MediaBridge.playing(currentMedia);
+        primary.setImageResource(playing ? R.drawable.ic_pause : R.drawable.ic_play);
+        primary.setContentDescription(playing ? "Pausar" : "Reproduzir");
+        primary.setEnabled(MediaBridge.supports(currentMedia,playing ? PlaybackState.ACTION_PAUSE : PlaybackState.ACTION_PLAY) || MediaBridge.supports(currentMedia,PlaybackState.ACTION_PLAY_PAUSE));
+        secondary.setEnabled(MediaBridge.supports(currentMedia,PlaybackState.ACTION_SKIP_TO_NEXT));
+        Button open=island.findViewById(R.id.notification_action);
+        open.setVisibility(best!=null && (best.open!=null || "time".equals(best.key)) ? View.VISIBLE : View.GONE);
+        open.setText(best!=null && "time".equals(best.key) ? "Encerrar" : "Abrir");
+        LinearLayout actions=island.findViewById(R.id.notification_actions);
+        actions.removeAllViews();
+        if (expanded && best!=null && best.actions!=null && !privateContent) {
+            int count=0;
+            for (Notification.Action action:best.actions) {
+                if (action.actionIntent==null || action.getRemoteInputs()!=null || count++>=3) continue;
+                Button button=(Button)LayoutInflater.from(this).inflate(R.layout.notification_action,actions,false);
+                button.setText(action.title); button.setOnClickListener(v -> send(action.actionIntent)); actions.addView(button);
+            }
+        }
+        int screenWidth=getResources().getDisplayMetrics().widthPixels;
+        int width=Math.min(dp(expanded ? Math.max(320,prefs.width()) : prefs.width()),Math.max(dp(140),screenWidth-dp(24)));
+        int maxOffset=Math.max(0,(screenWidth-width)/2-dp(8));
+        layout.width=width;
+        layout.height=expanded ? WindowManager.LayoutParams.WRAP_CONTENT : dp(prefs.height());
+        layout.x=Math.max(-maxOffset,Math.min(maxOffset,dp(prefs.offset())));
+        layout.y=dp(prefs.top());
+        try { windows.updateViewLayout(island,layout); } catch (IllegalArgumentException removed) { stopSelf(); }
+    }
+    private void send(PendingIntent intent) {
+        try {
+            if (Build.VERSION.SDK_INT>=34) {
+                ActivityOptions options=ActivityOptions.makeBasic();
+                options.setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+                intent.send(this,0,null,null,null,null,options.toBundle());
+            } else intent.send();
+        } catch (PendingIntent.CanceledException | SecurityException e) { Toast.makeText(this,"Ação indisponível. Abra o aplicativo de origem.",Toast.LENGTH_SHORT).show(); }
+        expanded=false; render();
+    }
+    private PendingIntent openApp() { return PendingIntent.getActivity(this,1,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT); }
+    @Override public void onConfigurationChanged(Configuration config) { super.onConfigurationChanged(config); render(); }
+    @Override public void onDestroy() {
+        destroyed=true; running=false; handler.removeCallbacksAndMessages(null);
+        ActivityStore.INSTANCE.observer=null;
+        if (prefs!=null) prefs.values.unregisterOnSharedPreferenceChangeListener(preferenceListener);
+        if (media!=null) media.close();
+        if (receiverRegistered) unregisterReceiver(signals);
+        if (audio!=null) audio.unregisterAudioDeviceCallback(audioCallback);
+        if (attached) { windows.removeView(island); attached=false; }
+        stopForeground(STOP_FOREGROUND_REMOVE); super.onDestroy();
+    }
+    @Override public IBinder onBind(Intent intent) { return null; }
+}
