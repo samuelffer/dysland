@@ -19,12 +19,16 @@ digest=hashlib.sha256(apk.read_bytes()).hexdigest()
 with zipfile.ZipFile(destination,'x',zipfile.ZIP_DEFLATED) as z:
     z.write(apk,'dysland-0.2.0-debug.apk')
     z.write(root/'docs/INSTALL.md','INSTALAR.md')
+    preview=root/'screenshots/dysland-home.png'
+    if preview.is_file():
+        assert preview.read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
+        z.write(preview,'PREVIA.png')
     z.write(root/'LICENSE','LICENSE')
     z.write(root/'licenses/Manrope-OFL.txt','Manrope-OFL.txt')
     z.writestr('SHA256SUMS',f'{digest}  dysland-0.2.0-debug.apk\n')
 with zipfile.ZipFile(destination) as z:
     assert z.testzip() is None
-    assert len(z.namelist())==5
+    assert len(z.namelist()) in (5,6)
     with tempfile.TemporaryDirectory() as temp:
         z.extractall(temp)
         assert hashlib.sha256((Path(temp)/'dysland-0.2.0-debug.apk').read_bytes()).hexdigest()==digest

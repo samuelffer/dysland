@@ -69,6 +69,7 @@ public final class MainActivity extends Activity {
             else startIsland(IslandService.START,0);
         });
         preview=new PreviewController(findViewById(R.id.preview_island));
+        preview.show(1);
         findViewById(R.id.demo_idle).setOnClickListener(v -> preview.show(0));
         findViewById(R.id.demo_music).setOnClickListener(v -> preview.show(1));
         findViewById(R.id.demo_timer).setOnClickListener(v -> preview.show(2));

@@ -7,7 +7,7 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="22dp" android:layout_marginTop="16dp" android:background="@drawable/hero">
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/copy_7_text" android:textSize="10sp" android:textColor="#655A8D" android:letterSpacing="0.16" />
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/copy_8_text" android:textSize="30sp" android:textColor="#171923" android:layout_marginTop="10dp" android:textStyle="bold" />
-                    <FrameLayout android:layout_width="match_parent" android:layout_height="164dp" android:clipChildren="false" android:clipToPadding="false">
+                    <FrameLayout android:layout_width="match_parent" android:layout_height="128dp" android:clipChildren="false" android:clipToPadding="false">
                         <include android:id="@+id/preview_island" layout="@layout/overlay_island" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="center" />
                     </FrameLayout>
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/copy_11_text" android:textSize="11sp" android:textColor="#656076" android:gravity="center" />
@@ -16,10 +16,6 @@
                         <Button android:id="@+id/demo_music" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" style="?android:attr/borderlessButtonStyle" android:text="@string/demo_music_text" android:textAllCaps="false" android:textSize="12sp" android:textColor="#554778" />
                         <Button android:id="@+id/demo_timer" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" style="?android:attr/borderlessButtonStyle" android:text="@string/demo_timer_text" android:textAllCaps="false" android:textSize="12sp" android:textColor="#554778" />
                     </LinearLayout>
-                </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="22dp" android:layout_marginTop="16dp" android:background="@drawable/card">
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/copy_17_text" android:textSize="21sp" android:textColor="#171923" android:textStyle="bold" />
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/copy_18_text" android:textSize="13sp" android:textColor="#777A8B" android:layout_marginTop="8dp" />
                     <Button android:id="@+id/enable" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="10dp" android:background="@drawable/pill" android:backgroundTint="#181A24" android:text="@string/enable_text" android:textAllCaps="false" android:stateListAnimator="@null" android:textSize="14sp" android:textColor="#FFFFFF" />
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/service_status_text" android:textSize="12sp" android:textColor="#777A8B" android:id="@+id/service_status" android:layout_marginTop="12dp" android:gravity="center" />
                 </LinearLayout>

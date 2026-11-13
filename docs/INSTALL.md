@@ -27,3 +27,5 @@ Sem anúncios, acesso à internet, contas ou coleta de dados. Fonte Manrope (SIL
 ## Movimento e nova interface
 
 Três áreas: Ilha, Atividades e Ajustes. A demonstração da tela inicial é identificada como prévia e não controla o player. Reduzir movimento (no app ou no sistema) remove os loops e a transição elástica. Não é necessário dar acesso ao microfone para as barras: elas são um indicador decorativo de reprodução, não um medidor de áudio.
+
+O pacote gerado no CI inclui `PREVIA.png`, uma captura real da tela inicial no emulador (a ilha dentro do cartão está explicitamente identificada como demonstração).
