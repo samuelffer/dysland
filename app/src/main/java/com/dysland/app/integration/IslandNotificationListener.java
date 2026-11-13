@@ -24,7 +24,7 @@ public final class IslandNotificationListener extends NotificationListenerServic
         boolean navigation = Notification.CATEGORY_NAVIGATION.equals(n.category);
         boolean progress = Notification.CATEGORY_PROGRESS.equals(n.category);
         boolean service = Notification.CATEGORY_SERVICE.equals(n.category);
-        if ((!call && !navigation && !progress && !service) || (!call && !sbn.isOngoing())) {
+        if ((!call && !navigation && !progress && !service) || (!sbn.isOngoing() && !(call && n.fullScreenIntent != null))) {
             ActivityStore.INSTANCE.remove(key); return;
         }
         Bundle extras = n.extras;

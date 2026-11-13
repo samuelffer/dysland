@@ -11,12 +11,7 @@ apk=root/'app/build/outputs/apk/debug/app-debug.apk'
 version='0.1.0'
 destination=root/'Zips'/f'dysland-{version}-android-debug.zip'
 if not apk.is_file(): sys.exit('Expected debug APK is missing')
-if destination.exists():
-    with zipfile.ZipFile(destination) as published:
-        assert published.testzip() is None
-        assert 'dysland-0.1.0-debug.apk' in published.namelist()
-    print('Existing published package preserved; bump version for a new delivery')
-    sys.exit(0)
+if destination.exists(): sys.exit('Refusing to overwrite a published version; bump app and package version first')
 with zipfile.ZipFile(apk) as z:
     if 'AndroidManifest.xml' not in z.namelist() or 'classes.dex' not in z.namelist(): sys.exit('Invalid APK')
 destination.parent.mkdir(exist_ok=True)

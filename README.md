@@ -38,7 +38,7 @@ python3 scripts/package.py
 
 Instale o SDK 35 e configure `ANDROID_HOME` ou `local.properties`. O wrapper baixa Gradle; o build baixa AGP do Google Maven e JUnit do Maven Central. `assembleRelease` valida a variante otimizada, mas **não distribui APK release não assinado**. O pacote distribuído contém o APK debug instalável, instruções, licenças e SHA256SUMS, nunca chaves.
 
-O workflow [Android](.github/workflows/android.yml) compila ambas as variantes, testa, executa lint, verifica assinatura debug e valida extração/estrutura do ZIP. Artifact expira em 30 dias; o download do GitHub tem um ZIP externo contendo o pacote final. O workflow tem apenas leitura e não publica commits, tags ou releases. Cada nova entrega exige incrementar `versionCode`, `versionName` e o nome em `package.py`/workflow.
+O workflow [Android](.github/workflows/android.yml) compila ambas as variantes, testa, executa lint, verifica assinatura debug e valida extração/estrutura do ZIP. Artifact expira em 30 dias; o download do GitHub tem um ZIP externo contendo o pacote final. O job de build tem apenas leitura. Após todos os testes, um job separado com escrita publica **somente o ZIP novo**, exclusivamente em push da branch confiável `arena/7e2b3c57-dysland`, verificando que ela não avançou. Não cria tags ou releases. Pull requests não recebem esse job. Cada nova entrega exige incrementar `versionCode`, `versionName` e o nome em `package.py`/workflow.
 
 ## Permissões e arquitetura de segurança
 

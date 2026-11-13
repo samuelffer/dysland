@@ -11,8 +11,6 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    permissions:
-      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -71,8 +69,21 @@ jobs:
           path: screenshots/dysland-home.png
           if-no-files-found: error
           retention-days: 30
-      - name: Publish new package only on the trusted working branch
-        if: ${{ success() && github.event_name == 'push' && github.repository == 'samuelffer/dysland' && github.ref == 'refs/heads/arena/7e2b3c57-dysland' }}
+  publish:
+    needs: build
+    if: ${{ github.event_name == 'push' && github.repository == 'samuelffer/dysland' && github.ref == 'refs/heads/arena/7e2b3c57-dysland' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v5
+        with:
+          name: dysland-0.1.0-android-debug
+          path: Zips
+      - name: Publish only the new ZIP, never overwrite or rebase
         run: |
           remote_sha=$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | cut -f1)
           test "$remote_sha" = "$GITHUB_SHA" || { echo "Branch advanced; refusing to publish stale binary"; exit 1; }
@@ -80,6 +91,7 @@ jobs:
             echo "Package already published; no overwrite."
             exit 0
           fi
+          python3 -c 'import zipfile; z=zipfile.ZipFile("Zips/dysland-0.1.0-android-debug.zip"); assert z.testzip() is None; assert "dysland-0.1.0-debug.apk" in z.namelist()'
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- Zips/dysland-0.1.0-android-debug.zip
