@@ -66,7 +66,7 @@ public final class PreviewController {
         root.findViewById(R.id.equalizer).setVisibility(music ? View.VISIBLE : View.GONE);
         root.findViewById(R.id.island_title).setVisibility(music || idle ? View.GONE : View.VISIBLE);
         ((ImageView)root.findViewById(R.id.artwork)).setImageResource(e==null ? R.drawable.ic_island : e.icon);
-        IslandPresentation.details(root,e,music,expanded,false);
+        IslandPresentation.details(root,e,music,expanded,e!=null && e.key.startsWith("notification:") && !prefs.enabled("show_content"));
         IslandPresentation.arrival(root,e,!reduce && ValueAnimator.areAnimatorsEnabled());
         root.findViewById(R.id.action_primary).setVisibility(music ? View.VISIBLE : View.GONE);
         root.findViewById(R.id.action_secondary).setVisibility(music ? View.VISIBLE : View.GONE);
@@ -97,6 +97,7 @@ public final class PreviewController {
             long now=animation.getCurrentPlayTime();double dt=last[0]==0 ? 1.0/60 : Math.max(0,now-last[0])/1000d;last[0]=now;
             if(reduce || (float)animation.getAnimatedValue()>=1) { springW.snap();springH.snap(); } else { springW.step(dt);springH.step(dt); }
             ViewGroup.LayoutParams p=root.getLayoutParams();p.width=Math.max(1,(int)Math.round(springW.value()));p.height=Math.max(1,(int)Math.round(springH.value()));root.setLayoutParams(p);
+            ((android.graphics.drawable.GradientDrawable)root.getBackground().mutate()).setCornerRadius(Math.min(p.height/2f,36*density));
         });
         morph.start();playback.setPlaying(music && playing && resumed,!reduce);
     }

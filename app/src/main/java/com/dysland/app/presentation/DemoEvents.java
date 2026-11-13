@@ -15,6 +15,7 @@ public final class DemoEvents {
         ActivityStore.Event e=new ActivityStore.Event(index==5 ? "charge_status" : index==4 ? "charge_intro" : index==2 || index==3 ? "time" : "demo",titles[index],subtitles[index],icons[index],50);
         e.kind=index==1 ? "media" : index==4 || index==5 ? "charging" : index==8 ? "navigation" : "activity";
         e.compactText=index==8 ? "200 m" : index==4 || index==5 ? "72%" : index==6 ? "15%" : index==7 ? "Conectado" : index==9 ? "Chamada" : index==10 ? "Gravando" : index==11 ? "Entrega" : e.title;
+        if(index>=8) e.key="notification:demo:"+index;
         e.source=index==8 ? "NAVEGAÇÃO · Exemplo" : index==4 || index==5 ? "ENERGIA" : index==1 ? "" : "DADOS DE DEMONSTRAÇÃO";
         return e;
     }

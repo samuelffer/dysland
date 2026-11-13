@@ -117,7 +117,7 @@ public final class MainActivity extends Activity {
         Switch toggle=findViewById(id); toggle.setChecked(prefs.enabled(key));
         toggle.setOnCheckedChangeListener((v,checked) -> {
             prefs.set(key,checked);
-            if (preview!=null) preview.configure(resumed && pageIndex==0,prefs.enabled("reduce_motion"));
+            if (preview!=null) { preview.configure(resumed && pageIndex==0,prefs.enabled("reduce_motion"));preview.refresh(); }
         });
     }
     private void setupGeometry() {
@@ -214,14 +214,16 @@ public final class MainActivity extends Activity {
         for (int i=0;i<pageIds.length;i++) {
             View page=findViewById(pageIds[i]); page.animate().cancel();
             page.setVisibility(i==pageIndex ? View.VISIBLE : View.GONE);
-            findViewById(navIds[i]).setBackgroundTintList(android.content.res.ColorStateList.valueOf(i==pageIndex ? 0xFF343044 : 0xFF191A22));
+            findViewById(navIds[i]).setSelected(i==pageIndex);
+            ((TextView)findViewById(navIds[i])).setTextColor(i==pageIndex ? ThemePalette.accent(prefs.number("theme",0)) : 0xFFA4A6B8);
+            findViewById(navIds[i]).setBackgroundTintList(android.content.res.ColorStateList.valueOf(i==pageIndex ? ThemePalette.selection(prefs.number("theme",0)) : 0xFF191A22));
         }
         View selected=findViewById(pageIds[pageIndex]);
         boolean motion=!prefs.enabled("reduce_motion") && ValueAnimator.areAnimatorsEnabled();
         selected.setAlpha(motion ? 0f : 1f); selected.setTranslationY(motion ? 20f : 0);
         selected.animate().alpha(1f).translationY(0).setDuration(motion ? 300 : 0).start();
         ((ScrollView)findViewById(R.id.page_scroll)).scrollTo(0,0);
-        if (preview!=null) preview.configure(resumed && pageIndex==0,prefs.enabled("reduce_motion"));
+        if (preview!=null) { preview.configure(resumed && pageIndex==0,prefs.enabled("reduce_motion"));preview.refresh(); }
     }
     private void updateStatus() {
         boolean access=getSystemService(NotificationManager.class).isNotificationListenerAccessGranted(new ComponentName(this,IslandNotificationListener.class));
