@@ -2,6 +2,12 @@
 
 Uma ilha de atividades para Android, inspirada na ergonomia da One UI, com identidade própria: carvão, verde-lima, tipografia Manrope, grandes títulos e cartões arredondados. **Prévia nativa 0.1.0, não um clone com APIs privadas.**
 
+## Download e validação
+
+[**Baixar Dysland 0.1.0 · APK debug em ZIP · Android 9+**](https://github.com/samuelffer/dysland/raw/refs/heads/arena/7e2b3c57-dysland/Zips/dysland-0.1.0-android-debug.zip)
+
+Build, lint, seis testes JVM e três testes de ciclo de vida em emulador Android 15 aprovados. Não testado em Samsung físico nem com chamadas/Bluetooth reais. [Evidências, checksums e artifacts](docs/VALIDATION.md).
+
 ## Produto
 
 - Sobreposição real `TYPE_APPLICATION_OVERLAY`, compacta/expandida, com presets aproximados e calibração em dp.

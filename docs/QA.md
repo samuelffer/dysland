@@ -1,4 +1,6 @@
-# Roteiro de aceitação em Android (não executado em dispositivo nesta entrega)
+# Roteiro de aceitação em Android
+
+O ciclo básico de abertura/permissão/ativação/desativação foi executado em emulador Android 15; veja [VALIDATION.md](VALIDATION.md). Os cenários abaixo continuam pendentes de validação manual e em hardware físico.
 
 - Instalação limpa, negar cada permissão: app abre, não inicia ilha sem sobreposição, controles próprios funcionam sem acesso às notificações.
 - Conceder permissões, ativar/desativar pelo app e pela notificação; revogar sobreposição com serviço ativo; verificar ausência de crash/janela órfã.
