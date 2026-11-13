@@ -43,6 +43,7 @@ public final class IslandService extends Service {
     private long lastPlayingAt;
     private int cutoutHash=Integer.MIN_VALUE;
     private float desiredAlpha=-1f;
+    private String lastMediaTitle="";
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener preferenceListener=(p,k) -> render();
     private final Runnable collapseTask=() -> { expanded=false; render(); };
     private final Runnable tick=new Runnable() {
@@ -210,9 +211,15 @@ public final class IslandService extends Service {
             row.setAlpha(animations ? 0f : 1f);
             row.animate().alpha(idle ? 0f : 1f).setStartDelay(animations ? 90 : 0).setDuration(animations ? 240 : 0).start();
             View content=island.findViewById(R.id.expanded_content);
-            content.animate().cancel(); content.setAlpha(animations ? 0f : 1f);
-            content.setTranslationY(animations ? dp(8) : 0);
-            content.animate().alpha(1f).translationY(0).setStartDelay(animations ? 100 : 0).setDuration(animations ? 260 : 0).start();
+            content.animate().cancel();
+            if (expanded) {
+                content.setVisibility(View.VISIBLE);
+                content.setAlpha(animations ? 0f : 1f); content.setTranslationY(animations ? dp(8) : 0);
+                content.animate().alpha(1f).translationY(0).setStartDelay(animations ? 100 : 0).setDuration(animations ? 260 : 0).start();
+            } else {
+                content.animate().alpha(0f).translationY(animations ? dp(-4) : 0).setStartDelay(0).setDuration(animations ? 140 : 0)
+                    .withEndAction(() -> { if (!expanded) content.setVisibility(View.GONE); }).start();
+            }
             lastExpanded=expanded;
         }
         float alpha=idle && !prefs.enabled("show_idle") ? 0f : 1f;
@@ -231,12 +238,18 @@ public final class IslandService extends Service {
         if (best!=null && best.art!=null) artwork.setImageBitmap(best.art); else artwork.setImageResource(best==null ? R.drawable.ic_island : best.icon);
         ((ImageView)island.findViewById(R.id.status_icon)).setImageResource(currentMedia!=null ? MediaBridge.playing(currentMedia) ? R.drawable.ic_pause : R.drawable.ic_play : R.drawable.ic_island);
         boolean isMedia=currentMedia!=null;
+        if (isMedia && !best.title.equals(lastMediaTitle)) {
+            lastMediaTitle=best.title;
+            artwork.animate().cancel(); artwork.setAlpha(animations ? 0f : 1f);
+            artwork.setScaleX(animations ? .82f : 1f); artwork.setScaleY(animations ? .82f : 1f);
+            artwork.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(animations ? 260 : 0).start();
+        }
         island.findViewById(R.id.equalizer).setVisibility(isMedia ? View.VISIBLE : View.GONE);
         island.findViewById(R.id.island_title).setVisibility(isMedia || idle ? View.GONE : View.VISIBLE);
         island.findViewById(R.id.status_icon).setVisibility(View.GONE);
         if (playbackMotion!=null) playbackMotion.setPlaying(isMedia && MediaBridge.playing(currentMedia),animations);
-        island.findViewById(R.id.compact_row).setVisibility(idle ? View.INVISIBLE : View.VISIBLE);
-        island.findViewById(R.id.expanded_content).setVisibility(expanded ? View.VISIBLE : View.GONE);
+        island.findViewById(R.id.compact_row).setVisibility(View.VISIBLE);
+        if (expanded) island.findViewById(R.id.expanded_content).setVisibility(View.VISIBLE);
         LinearLayout.LayoutParams row=(LinearLayout.LayoutParams)island.findViewById(R.id.compact_row).getLayoutParams();
         row.height=dp(prefs.height()-16); island.findViewById(R.id.compact_row).setLayoutParams(row);
         ImageButton primary=island.findViewById(R.id.action_primary), secondary=island.findViewById(R.id.action_secondary);

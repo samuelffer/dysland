@@ -16,6 +16,7 @@ public final class IslandMotion implements Choreographer.FrameCallback {
     private long last;
     public IslandMotion(View view,WindowManager windows,WindowManager.LayoutParams params) {
         this.view=view; this.windows=windows; this.params=params;
+        view.getBackground().mutate();
         width=new SpringValue(params.width,.44,.84);
         height=new SpringValue(params.height,.48,.88);
         x=new SpringValue(params.x,.42,.9); y=new SpringValue(params.y,.46,.9);
