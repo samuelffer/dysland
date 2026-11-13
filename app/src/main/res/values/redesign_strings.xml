@@ -55,7 +55,7 @@
     <string name="show_content_text">Detalhes das atividades</string>
     <string name="copy_78_text">Exibe o conteúdo das notificações compatíveis.</string>
     <string name="copy_80_text">Feita para o Android.</string>
-    <string name="copy_81_text">Dysland 0.2.0\nLayouts XML. Ícones próprios. Sem anúncios ou rastreadores.\n\nToque na ilha para expandir; toque longo abre o app.\n\nAções de chamada e atividades dependem do app de origem. Não monitoramos indicadores globais de câmera, microfone ou GPS.</string>
+    <string name="copy_81_text">Dysland 0.2.1\nLayouts XML. Ícones próprios. Sem anúncios ou rastreadores.\n\nToque na ilha para expandir; toque longo abre o app.\n\nAções de chamada e atividades dependem do app de origem. Não monitoramos indicadores globais de câmera, microfone ou GPS.</string>
     <string name="nav_home_text">Ilha</string>
     <string name="nav_activities_text">Atividades</string>
     <string name="nav_settings_text">Ajustes</string>

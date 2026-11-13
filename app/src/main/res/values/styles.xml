@@ -1,6 +1,6 @@
 <resources>
     <style name="Theme.Dysland" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:fontFamily">@font/manrope</item>
+        <item name="android:fontFamily">@font/manrope_family</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">#F5F5F9</item>
         <item name="android:navigationBarColor">#F5F5F9</item>

@@ -1,8 +1,8 @@
-# Instalar o Dysland 0.2.0 (prévia Android)
+# Instalar o Dysland 0.2.1 (prévia Android)
 
 Requisito: Android 9 (API 28) ou superior. APK universal, sem runtime adicional.
 
-1. Extraia o ZIP e abra `dysland-0.2.0-debug.apk` no telefone.
+1. Extraia o ZIP e abra `dysland-0.2.1-debug.apk` no telefone.
 2. Autorize temporariamente a instalação dessa fonte, se solicitado pelo Android.
 3. Abra Dysland e conceda **Exibir sobre outros apps**. Ative a ilha.
 4. Para mídia/chamadas/atividades, autorize **Acesso às notificações**. Esse acesso é sensível: o Android permite ler notificações. O Dysland processa apenas atividades compatíveis em memória, sem histórico, rede ou telemetria.
