@@ -191,7 +191,7 @@ public final class IslandService extends Service {
         ((ImageView)island.findViewById(R.id.status_icon)).setImageResource(currentMedia!=null ? MediaBridge.playing(currentMedia) ? R.drawable.ic_pause : R.drawable.ic_play : R.drawable.ic_island);
         island.findViewById(R.id.expanded_content).setVisibility(expanded ? View.VISIBLE : View.GONE);
         LinearLayout.LayoutParams row=(LinearLayout.LayoutParams)island.findViewById(R.id.compact_row).getLayoutParams();
-        row.height=dp(prefs.height()-24); island.findViewById(R.id.compact_row).setLayoutParams(row);
+        row.height=dp(prefs.height()-16); island.findViewById(R.id.compact_row).setLayoutParams(row);
         ImageButton primary=island.findViewById(R.id.action_primary), secondary=island.findViewById(R.id.action_secondary);
         primary.setVisibility(currentMedia==null ? View.GONE : View.VISIBLE); secondary.setVisibility(currentMedia==null ? View.GONE : View.VISIBLE);
         boolean playing=MediaBridge.playing(currentMedia);
